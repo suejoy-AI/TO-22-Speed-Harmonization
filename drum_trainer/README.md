@@ -42,6 +42,12 @@ the drum notes — your level rises automatically as you keep practicing.
 - **Search any song.** The "Find a song" box searches every song by title or
   artist across all genres and levels; picking a result jumps straight to that
   song (setting the genre, level, and tempo for you).
+- **Play the real song from YouTube.** Each song has a "Play the real song from
+  YouTube" panel with a **Search** link (opens the actual recording on YouTube)
+  and a paste-a-link **embedded player** so you can drum along to the real track
+  while reading the notation. Note: the embedded player works in the downloaded/
+  local file or a normally-hosted page; the sandboxed claude.ai artifact blocks
+  embedded YouTube, so there use the Search link to open it in a new tab.
 - **Mute the drums to play along.** A **Drums** toggle silences the app's kit
   while the song's backing keeps playing, so you can drum over it yourself and
   read the on-screen notation as your guide.

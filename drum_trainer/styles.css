@@ -189,6 +189,20 @@ input[type="text"]::placeholder { color: var(--muted); }
 .muted { color: var(--muted); }
 .small { font-size: .82rem; }
 
+/* ---------- YouTube play-along ---------- */
+.yt { margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.yt > summary { cursor: pointer; padding: 10px 12px; font-weight: 600; font-size: .92rem; list-style: none; }
+.yt > summary::-webkit-details-marker { display: none; }
+.yt > summary::before { content: "▸ "; color: var(--muted); }
+.yt[open] > summary::before { content: "▾ "; }
+.yt-body { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.yt-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.yt-row #yt-input { flex: 1 1 200px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.yt-row .btn { flex: 0 0 auto; padding: 10px 16px; text-decoration: none; display: inline-flex; align-items: center; }
+.yt-frame { position: relative; width: 100%; }
+.yt-frame iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; display: block; }
+.yt-frame:empty { display: none; }
+
 /* ---------- Lyrics ---------- */
 .lyrics {
   margin: 14px 0 4px; padding: 14px 16px;

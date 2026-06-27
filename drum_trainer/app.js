@@ -49,6 +49,11 @@
     resetProgress: document.getElementById("reset-progress"),
     patternTitle: document.getElementById("pattern-title"),
     patternTip: document.getElementById("pattern-tip"),
+    ytInput: document.getElementById("yt-input"),
+    ytLoad: document.getElementById("yt-load"),
+    ytSearch: document.getElementById("yt-search"),
+    ytFrame: document.getElementById("yt-frame"),
+    ytNote: document.getElementById("yt-note"),
     lyrics: document.getElementById("lyrics"),
     grid: document.getElementById("grid"),
     drumTab: document.getElementById("drum-tab"),
@@ -564,6 +569,39 @@
     renderTab(tracks);
   }
 
+  // ---- YouTube play-along (real recordings) ------------------------------
+  function updateYtSearch() {
+    let q = "drum cover";
+    if (songMode() && currentSong()) {
+      const s = currentSong();
+      q = `${s.title} ${s.artist || ""}`.trim();
+    }
+    el.ytSearch.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+  }
+
+  function parseYtId(url) {
+    if (!url) return null;
+    url = url.trim();
+    if (/^[\w-]{11}$/.test(url)) return url; // bare id
+    let m = url.match(/[?&]v=([\w-]{11})/) ||
+            url.match(/youtu\.be\/([\w-]{11})/) ||
+            url.match(/youtube\.com\/(?:embed|shorts|live)\/([\w-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  function loadYouTube() {
+    const id = parseYtId(el.ytInput.value);
+    if (!id) {
+      el.ytNote.textContent = "Couldn't read that link — paste a full YouTube URL (or use Search ↗).";
+      return;
+    }
+    el.ytFrame.innerHTML =
+      `<iframe src="https://www.youtube.com/embed/${id}?rel=0" title="YouTube player" ` +
+      `allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    el.ytNote.textContent =
+      "Tip: press the song's Play on YouTube, then start drumming. If the player stays blank, this embedded preview is blocking YouTube — open the downloaded file instead, or use Search ↗ to play it in a new tab.";
+  }
+
   // ---- Lyrics (public-domain songs) --------------------------------------
   let lyricRefs = [];
   function renderLyrics() {
@@ -623,8 +661,13 @@
     const p = currentPattern();
     if (songMode()) {
       const s = currentSong();
-      el.patternTitle.textContent = `${currentGenre().label} · ♫ ${s.title} — ${s.artist}`;
-      el.patternTip.textContent = `${s.tip} · Press Play for the full song (intro → verses → choruses → outro).`;
+      if (s._classic) {
+        el.patternTitle.textContent = `${currentGenre().label} · 🎵 ${s.title} — ${s.artist}`;
+        el.patternTip.textContent = `${s.tip} This is the real, public-domain melody & lyrics.`;
+      } else {
+        el.patternTitle.textContent = `${currentGenre().label} · ${s.title} — ${s.artist} (practice groove)`;
+        el.patternTip.textContent = `Drum groove + bass/chord backing in this song's key (${s.key || "?"}) at ${s.bpm} BPM — NOT the original recording or melody (those are copyrighted, so it won't sound like the real track). Mute Drums to play along.`;
+      }
       el.levelName.textContent = `Playing along: ${s.title}`;
     } else {
       el.patternTitle.textContent = `${currentGenre().label} · Level ${state.level}: ${p.name}`;
@@ -638,6 +681,7 @@
     renderGrid();
     renderTab();
     renderLyrics();
+    updateYtSearch();
     updateProgressUI();
   }
 
@@ -989,6 +1033,9 @@
     el.play.addEventListener("click", play);
     el.stop.addEventListener("click", stop);
     el.testSound.addEventListener("click", testSound);
+
+    el.ytLoad.addEventListener("click", loadYouTube);
+    el.ytInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadYouTube(); });
 
     el.csAdd.addEventListener("click", addSong);
     el.csTitle.addEventListener("input", updateLookup);
