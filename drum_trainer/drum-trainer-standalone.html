@@ -190,6 +190,17 @@ input[type="text"]::placeholder { color: var(--muted); }
 .muted { color: var(--muted); }
 .small { font-size: .82rem; }
 
+/* ---------- Lyrics ---------- */
+.lyrics {
+  margin: 14px 0 4px; padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(77,208,225,0.06), rgba(0,0,0,0.0));
+  border: 1px solid var(--line); border-radius: 10px;
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+}
+.lyrics .lyric-head { width: 100%; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.lyric-line { font-size: 1rem; color: var(--muted); transition: color .15s, transform .15s; }
+.lyric-line.active { color: var(--accent-2); font-weight: 700; transform: scale(1.04); }
+
 /* ---------- Grid sequencer ---------- */
 .grid { display: grid; gap: 6px; margin: 18px 0 22px; overflow-x: auto; }
 .grid-row { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; }
@@ -337,6 +348,9 @@ input[type="text"]::placeholder { color: var(--muted); }
         <h2 id="pattern-title">—</h2>
         <p id="pattern-tip" class="muted"></p>
       </div>
+
+      <!-- Lyrics (public-domain songs) -->
+      <div id="lyrics" class="lyrics" hidden></div>
 
       <!-- Visual step-sequencer grid -->
       <div id="grid" class="grid" role="img" aria-label="Drum pattern grid"></div>
@@ -715,6 +729,29 @@ window.DrumSamples = {"kick":"data:audio/wav;base64,UklGRqwuAABXQVZFZm10IBAAAAAB
       osc.connect(lp).connect(g).connect(master);
       osc.start(time);
       osc.stop(time + dur + 0.05);
+    },
+
+    // Melody / lead voice for public-domain songs (the actual tune).
+    lead(time, midi, dur = 0.25, vel = 0.5) {
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+      const o1 = ctx.createOscillator();
+      o1.type = "triangle";
+      o1.frequency.value = freq;
+      const o2 = ctx.createOscillator();
+      o2.type = "sine";
+      o2.frequency.value = freq * 2; // octave shimmer
+      const g = ctx.createGain();
+      const hold = Math.max(0.06, dur * 0.8);
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(vel, time + 0.015);
+      g.gain.setValueAtTime(vel, time + hold);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur + 0.05);
+      const g2 = ctx.createGain();
+      g2.gain.value = 0.28;
+      o2.connect(g2).connect(g);
+      o1.connect(g).connect(master);
+      o1.start(time); o1.stop(time + dur + 0.1);
+      o2.start(time); o2.stop(time + dur + 0.1);
     },
 
     // Soft chord stab for the backing track
@@ -1100,6 +1137,84 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
 </script>
 <script>
 /*
+ * classics.js — public-domain songs whose actual melodies AND lyrics are
+ * reproduced in full (melody + lyrics + chords + bass + drums). These tunes are
+ * NOT copyrighted, so the real song plays; mute the Drums toggle to play along.
+ *
+ * Each song: { genre, level, title, composer, bpm, groove, repeat, bars }
+ *   bars: one entry per bar — { chord:<bass-octave midi>, mel:[[step,midi,dur]], lyric:"" }
+ *   melody midi is in the C4 (60) octave; step 0..15; dur in 16th steps.
+ */
+(function (global) {
+  "use strict";
+
+  const POP_BEAT = { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" };
+  const ROCK_BEAT = { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" };
+  const C = 36, D = 38, E = 40, F = 41, G = 43;
+
+  global.DrumClassics = [
+    {
+      genre: "pop", level: 1, title: "Ode to Joy", composer: "Beethoven (public domain)",
+      bpm: 100, groove: POP_BEAT, repeat: 2,
+      bars: [
+        { chord: C, mel: [[0,64,4],[4,64,4],[8,65,4],[12,67,4]], lyric: "Joyful, joyful," },
+        { chord: G, mel: [[0,67,4],[4,65,4],[8,64,4],[12,62,4]], lyric: "we adore thee," },
+        { chord: C, mel: [[0,60,4],[4,60,4],[8,62,4],[12,64,4]], lyric: "God of glory," },
+        { chord: G, mel: [[0,64,6],[6,62,2],[8,62,8]],          lyric: "Lord of love;" },
+        { chord: C, mel: [[0,64,4],[4,64,4],[8,65,4],[12,67,4]], lyric: "Hearts unfold like" },
+        { chord: G, mel: [[0,67,4],[4,65,4],[8,64,4],[12,62,4]], lyric: "flow'rs before thee," },
+        { chord: C, mel: [[0,60,4],[4,60,4],[8,62,4],[12,64,4]], lyric: "opening to" },
+        { chord: C, mel: [[0,62,4],[4,60,4],[8,60,8]],          lyric: "the sun above." },
+      ],
+    },
+    {
+      genre: "pop", level: 1, title: "Twinkle Twinkle Little Star", composer: "Traditional (public domain)",
+      bpm: 96, groove: POP_BEAT, repeat: 2,
+      bars: [
+        { chord: C, mel: [[0,60,4],[4,60,4],[8,67,4],[12,67,4]], lyric: "Twinkle, twinkle," },
+        { chord: F, mel: [[0,69,4],[4,69,4],[8,67,8]],          lyric: "little star," },
+        { chord: F, mel: [[0,65,4],[4,65,4],[8,64,4],[12,64,4]], lyric: "how I wonder" },
+        { chord: C, mel: [[0,62,4],[4,62,4],[8,60,8]],          lyric: "what you are!" },
+        { chord: C, mel: [[0,67,4],[4,67,4],[8,65,4],[12,65,4]], lyric: "Up above the" },
+        { chord: G, mel: [[0,64,4],[4,64,4],[8,62,8]],          lyric: "world so high," },
+        { chord: C, mel: [[0,67,4],[4,67,4],[8,65,4],[12,65,4]], lyric: "like a diamond" },
+        { chord: G, mel: [[0,64,4],[4,64,4],[8,62,8]],          lyric: "in the sky." },
+      ],
+    },
+    {
+      genre: "pop", level: 1, title: "Jingle Bells", composer: "James Pierpont (public domain)",
+      bpm: 120, groove: POP_BEAT, repeat: 2,
+      bars: [
+        { chord: C, mel: [[0,64,4],[4,64,4],[8,64,8]],          lyric: "Jingle bells," },
+        { chord: C, mel: [[0,64,4],[4,64,4],[8,64,8]],          lyric: "jingle bells," },
+        { chord: C, mel: [[0,64,4],[4,67,4],[8,60,4],[12,62,4]], lyric: "jingle all the" },
+        { chord: C, mel: [[0,64,16]],                           lyric: "way!" },
+        { chord: F, mel: [[0,65,4],[4,65,4],[8,65,4],[12,65,4]], lyric: "Oh what fun it" },
+        { chord: C, mel: [[0,65,4],[4,64,4],[8,64,4],[12,64,4]], lyric: "is to ride in a" },
+        { chord: G, mel: [[0,64,4],[4,62,4],[8,62,4],[12,64,4]], lyric: "one-horse open" },
+        { chord: G, mel: [[0,62,4],[4,67,8]],                   lyric: "sleigh!" },
+      ],
+    },
+    {
+      genre: "rock", level: 1, title: "Mary Had a Little Lamb", composer: "Traditional (public domain)",
+      bpm: 100, groove: ROCK_BEAT, repeat: 2,
+      bars: [
+        { chord: C, mel: [[0,64,4],[4,62,4],[8,60,4],[12,62,4]], lyric: "Mary had a" },
+        { chord: C, mel: [[0,64,4],[4,64,4],[8,64,8]],          lyric: "little lamb," },
+        { chord: G, mel: [[0,62,4],[4,62,4],[8,62,8]],          lyric: "little lamb," },
+        { chord: C, mel: [[0,64,4],[4,67,4],[8,67,8]],          lyric: "little lamb," },
+        { chord: C, mel: [[0,64,4],[4,62,4],[8,60,4],[12,62,4]], lyric: "Mary had a" },
+        { chord: C, mel: [[0,64,4],[4,64,4],[8,64,4],[12,64,4]], lyric: "little lamb whose" },
+        { chord: G, mel: [[0,62,4],[4,62,4],[8,64,4],[12,62,4]], lyric: "fleece was white as" },
+        { chord: C, mel: [[0,60,16]],                           lyric: "snow." },
+      ],
+    },
+  ];
+})(window);
+
+</script>
+<script>
+/*
  * app.js — UI, scheduling, and level progression for the Drum Trainer.
  */
 (function () {
@@ -1150,6 +1265,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     resetProgress: document.getElementById("reset-progress"),
     patternTitle: document.getElementById("pattern-title"),
     patternTip: document.getElementById("pattern-tip"),
+    lyrics: document.getElementById("lyrics"),
     grid: document.getElementById("grid"),
     drumTab: document.getElementById("drum-tab"),
     pads: document.getElementById("pads"),
@@ -1218,7 +1334,30 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     }));
     return { bass, chords };
   }
+  function buildClassicTimeline(song, genre) {
+    const groove = song.tracks;
+    const reps = song.repeat || 2;
+    const bars = [];
+    bars.push({ tracks: introGroove(groove), section: "Intro", backing: songBacking(song.bars[0].chord, genre), melody: null, lyric: "" });
+    for (let r = 0; r < reps; r++) {
+      song.bars.forEach((bar, bi) => {
+        bars.push({
+          tracks: groove,
+          section: reps > 1 ? `Theme ${r + 1}` : "Theme",
+          backing: songBacking(bar.chord, genre),
+          melody: bar.mel,
+          lyric: bar.lyric || "",
+          lyricIdx: bi,
+        });
+      });
+    }
+    const last = song.bars[song.bars.length - 1];
+    bars.push({ tracks: { crash: "x---------------", kick: "x-------x-------" }, section: "Outro", backing: songBacking(last.chord, genre), melody: null, lyric: "", lyricIdx: -1 });
+    return bars;
+  }
+
   function buildTimeline(song, genre) {
+    if (song.bars) return buildClassicTimeline(song, genre);
     const struct = SONG_STRUCTURE[genre];
     const prog = SONG_PROG[genre];
     const R = song.root || 40;
@@ -1296,6 +1435,18 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
         _key: "custom" + cs.id, _genre: cs.genre, _level: lvl, _custom: true, _id: cs.id,
       });
     });
+    // public-domain songs whose actual melody (and lyrics) are reproduced
+    (window.DrumClassics || []).forEach((cs) => {
+      if (!SONGDB[cs.genre]) return;
+      const lvl = Math.min(Math.max(cs.level, 1), 5);
+      SONGDB[cs.genre][lvl].push({
+        title: cs.title, artist: cs.composer, bpm: cs.bpm,
+        tip: "Public-domain song — the actual melody & lyrics play. Mute Drums to play along yourself. — " + cs.composer,
+        tracks: cs.groove, gChorus: cs.groove, bars: cs.bars, repeat: cs.repeat || 2,
+        lyrics: cs.lyrics || null,
+        _key: "classic" + cs.genre + cs.title, _genre: cs.genre, _level: lvl, _classic: true,
+      });
+    });
   }
 
   function currentSongList() {
@@ -1352,7 +1503,8 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     list.forEach((s, i) => {
       const opt = document.createElement("option");
       opt.value = String(i);
-      opt.textContent = `${s.title} — ${s.artist}`;
+      const mark = s._classic ? "🎵 " : s._custom ? "★ " : "";
+      opt.textContent = `${mark}${s.title} — ${s.artist}`;
       el.song.appendChild(opt);
     });
     el.song.value = String(state.song);
@@ -1368,7 +1520,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
       const label = (GENRES[genre] && GENRES[genre].label) || genre;
       for (let lvl = 1; lvl <= 5; lvl++) {
         (SONGDB[genre][lvl] || []).forEach((s, idx) => {
-          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist, custom: !!s._custom });
+          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist, custom: !!s._custom, classic: !!s._classic });
         });
       }
     });
@@ -1403,7 +1555,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
       const row = document.createElement("div");
       row.className = "search-item" + (i === 0 ? " active" : "");
       row.innerHTML =
-        `<span><span class="si-name">${m.custom ? "★ " : ""}${escapeHtml(m.title)}</span> ` +
+        `<span><span class="si-name">${m.classic ? "🎵 " : m.custom ? "★ " : ""}${escapeHtml(m.title)}</span> ` +
         `<span class="si-artist">— ${escapeHtml(m.artist)}</span></span>` +
         `<span class="si-tag">${escapeHtml(m.genreLabel)} · L${m.level}</span>`;
       row.addEventListener("mousedown", (ev) => {
@@ -1627,6 +1779,31 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     renderTab(tracks);
   }
 
+  // ---- Lyrics (public-domain songs) --------------------------------------
+  let lyricRefs = [];
+  function renderLyrics() {
+    lyricRefs = [];
+    const s = songMode() ? currentSong() : null;
+    const hasLyrics = s && s.bars && s.bars.some((b) => b.lyric);
+    if (!hasLyrics) { el.lyrics.hidden = true; el.lyrics.innerHTML = ""; return; }
+    el.lyrics.hidden = false;
+    el.lyrics.innerHTML = "";
+    const head = document.createElement("div");
+    head.className = "lyric-head";
+    head.textContent = "Lyrics — sing/play along";
+    el.lyrics.appendChild(head);
+    s.bars.forEach((b) => {
+      const span = document.createElement("span");
+      span.className = "lyric-line";
+      span.textContent = b.lyric || "";
+      el.lyrics.appendChild(span);
+      lyricRefs.push(span);
+    });
+  }
+  function highlightLyric(idx) {
+    lyricRefs.forEach((el2, i) => el2.classList.toggle("active", i === idx));
+  }
+
   function renderPads() {
     const padDefs = [
       { voice: "kick", label: "Kick", key: "A" },
@@ -1675,6 +1852,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     if (el.csMove && songMode()) el.csMove.value = String(state.level);
     renderGrid();
     renderTab();
+    renderLyrics();
     updateProgressUI();
   }
 
@@ -1751,6 +1929,13 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
         const chord = b.chords.find((c) => c.step === step);
         if (chord) Audio.play("chord", hitTime, chord.midis, chord.dur);
       }
+    }
+
+    // melody / lead (public-domain songs) — the actual tune, under "Backing"
+    if (el.backing.checked && bar.melody) {
+      bar.melody.forEach((n) => {
+        if (n[0] === step) Audio.play("lead", hitTime, n[1], (n[2] || 2) * stepDuration(), 0.5);
+      });
     }
 
     visualQueue.push({ step, time: hitTime, bar: (songMode() && state.timeline) ? state.barPos : undefined });
@@ -1855,6 +2040,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     if (bar !== lastDrawnBar && bar >= 0 && state.timeline && state.timeline[bar]) {
       renderBar(state.timeline[bar].tracks);
       updateSongProgress(bar);
+      if (lyricRefs.length) highlightLyric(state.timeline[bar].lyricIdx != null ? state.timeline[bar].lyricIdx : -1);
       lastDrawnBar = bar;
       lastDrawnStep = -1;
     }
@@ -1888,16 +2074,21 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
   // ---- Output level meter (sound diagnostics) ----------------------------
   let meterRunning = false;
   let sawSound = false;
+  let sampleMsgShown = false;
   function startMeter() {
     if (meterRunning) return;
     meterRunning = true;
     const tick = () => {
       const lvl = Audio.level();
       el.meterFill.style.width = Math.min(100, Math.round(lvl * 140)) + "%";
-      if (lvl > 0.02 && !sawSound) {
+      if (!sampleMsgShown && Audio.loadedSamples > 0) {
+        sampleMsgShown = true;
+        el.audioStatus.textContent =
+          `🥁 Real acoustic drum samples active (${Audio.loadedSamples}/9). The bass, chords & melody are synthesized — that synth is the "electronic" sound.`;
+      } else if (!sampleMsgShown && lvl > 0.02 && !sawSound) {
         sawSound = true;
         el.audioStatus.textContent =
-          "🔊 Audio IS being produced. If you still hear nothing, the sound is leaving the app — check device volume, output device, and (on claude.ai) that the tab isn't muted.";
+          "🔊 Audio is playing. If you hear nothing, check device/output volume and that the tab isn't muted. (Drum samples still loading…)";
       }
       requestAnimationFrame(tick);
     };

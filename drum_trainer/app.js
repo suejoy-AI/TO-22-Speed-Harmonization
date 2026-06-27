@@ -49,6 +49,7 @@
     resetProgress: document.getElementById("reset-progress"),
     patternTitle: document.getElementById("pattern-title"),
     patternTip: document.getElementById("pattern-tip"),
+    lyrics: document.getElementById("lyrics"),
     grid: document.getElementById("grid"),
     drumTab: document.getElementById("drum-tab"),
     pads: document.getElementById("pads"),
@@ -117,7 +118,30 @@
     }));
     return { bass, chords };
   }
+  function buildClassicTimeline(song, genre) {
+    const groove = song.tracks;
+    const reps = song.repeat || 2;
+    const bars = [];
+    bars.push({ tracks: introGroove(groove), section: "Intro", backing: songBacking(song.bars[0].chord, genre), melody: null, lyric: "" });
+    for (let r = 0; r < reps; r++) {
+      song.bars.forEach((bar, bi) => {
+        bars.push({
+          tracks: groove,
+          section: reps > 1 ? `Theme ${r + 1}` : "Theme",
+          backing: songBacking(bar.chord, genre),
+          melody: bar.mel,
+          lyric: bar.lyric || "",
+          lyricIdx: bi,
+        });
+      });
+    }
+    const last = song.bars[song.bars.length - 1];
+    bars.push({ tracks: { crash: "x---------------", kick: "x-------x-------" }, section: "Outro", backing: songBacking(last.chord, genre), melody: null, lyric: "", lyricIdx: -1 });
+    return bars;
+  }
+
   function buildTimeline(song, genre) {
+    if (song.bars) return buildClassicTimeline(song, genre);
     const struct = SONG_STRUCTURE[genre];
     const prog = SONG_PROG[genre];
     const R = song.root || 40;
@@ -195,6 +219,18 @@
         _key: "custom" + cs.id, _genre: cs.genre, _level: lvl, _custom: true, _id: cs.id,
       });
     });
+    // public-domain songs whose actual melody (and lyrics) are reproduced
+    (window.DrumClassics || []).forEach((cs) => {
+      if (!SONGDB[cs.genre]) return;
+      const lvl = Math.min(Math.max(cs.level, 1), 5);
+      SONGDB[cs.genre][lvl].push({
+        title: cs.title, artist: cs.composer, bpm: cs.bpm,
+        tip: "Public-domain song — the actual melody & lyrics play. Mute Drums to play along yourself. — " + cs.composer,
+        tracks: cs.groove, gChorus: cs.groove, bars: cs.bars, repeat: cs.repeat || 2,
+        lyrics: cs.lyrics || null,
+        _key: "classic" + cs.genre + cs.title, _genre: cs.genre, _level: lvl, _classic: true,
+      });
+    });
   }
 
   function currentSongList() {
@@ -251,7 +287,8 @@
     list.forEach((s, i) => {
       const opt = document.createElement("option");
       opt.value = String(i);
-      opt.textContent = `${s.title} — ${s.artist}`;
+      const mark = s._classic ? "🎵 " : s._custom ? "★ " : "";
+      opt.textContent = `${mark}${s.title} — ${s.artist}`;
       el.song.appendChild(opt);
     });
     el.song.value = String(state.song);
@@ -267,7 +304,7 @@
       const label = (GENRES[genre] && GENRES[genre].label) || genre;
       for (let lvl = 1; lvl <= 5; lvl++) {
         (SONGDB[genre][lvl] || []).forEach((s, idx) => {
-          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist, custom: !!s._custom });
+          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist, custom: !!s._custom, classic: !!s._classic });
         });
       }
     });
@@ -302,7 +339,7 @@
       const row = document.createElement("div");
       row.className = "search-item" + (i === 0 ? " active" : "");
       row.innerHTML =
-        `<span><span class="si-name">${m.custom ? "★ " : ""}${escapeHtml(m.title)}</span> ` +
+        `<span><span class="si-name">${m.classic ? "🎵 " : m.custom ? "★ " : ""}${escapeHtml(m.title)}</span> ` +
         `<span class="si-artist">— ${escapeHtml(m.artist)}</span></span>` +
         `<span class="si-tag">${escapeHtml(m.genreLabel)} · L${m.level}</span>`;
       row.addEventListener("mousedown", (ev) => {
@@ -526,6 +563,31 @@
     renderTab(tracks);
   }
 
+  // ---- Lyrics (public-domain songs) --------------------------------------
+  let lyricRefs = [];
+  function renderLyrics() {
+    lyricRefs = [];
+    const s = songMode() ? currentSong() : null;
+    const hasLyrics = s && s.bars && s.bars.some((b) => b.lyric);
+    if (!hasLyrics) { el.lyrics.hidden = true; el.lyrics.innerHTML = ""; return; }
+    el.lyrics.hidden = false;
+    el.lyrics.innerHTML = "";
+    const head = document.createElement("div");
+    head.className = "lyric-head";
+    head.textContent = "Lyrics — sing/play along";
+    el.lyrics.appendChild(head);
+    s.bars.forEach((b) => {
+      const span = document.createElement("span");
+      span.className = "lyric-line";
+      span.textContent = b.lyric || "";
+      el.lyrics.appendChild(span);
+      lyricRefs.push(span);
+    });
+  }
+  function highlightLyric(idx) {
+    lyricRefs.forEach((el2, i) => el2.classList.toggle("active", i === idx));
+  }
+
   function renderPads() {
     const padDefs = [
       { voice: "kick", label: "Kick", key: "A" },
@@ -574,6 +636,7 @@
     if (el.csMove && songMode()) el.csMove.value = String(state.level);
     renderGrid();
     renderTab();
+    renderLyrics();
     updateProgressUI();
   }
 
@@ -650,6 +713,13 @@
         const chord = b.chords.find((c) => c.step === step);
         if (chord) Audio.play("chord", hitTime, chord.midis, chord.dur);
       }
+    }
+
+    // melody / lead (public-domain songs) — the actual tune, under "Backing"
+    if (el.backing.checked && bar.melody) {
+      bar.melody.forEach((n) => {
+        if (n[0] === step) Audio.play("lead", hitTime, n[1], (n[2] || 2) * stepDuration(), 0.5);
+      });
     }
 
     visualQueue.push({ step, time: hitTime, bar: (songMode() && state.timeline) ? state.barPos : undefined });
@@ -754,6 +824,7 @@
     if (bar !== lastDrawnBar && bar >= 0 && state.timeline && state.timeline[bar]) {
       renderBar(state.timeline[bar].tracks);
       updateSongProgress(bar);
+      if (lyricRefs.length) highlightLyric(state.timeline[bar].lyricIdx != null ? state.timeline[bar].lyricIdx : -1);
       lastDrawnBar = bar;
       lastDrawnStep = -1;
     }
@@ -787,16 +858,21 @@
   // ---- Output level meter (sound diagnostics) ----------------------------
   let meterRunning = false;
   let sawSound = false;
+  let sampleMsgShown = false;
   function startMeter() {
     if (meterRunning) return;
     meterRunning = true;
     const tick = () => {
       const lvl = Audio.level();
       el.meterFill.style.width = Math.min(100, Math.round(lvl * 140)) + "%";
-      if (lvl > 0.02 && !sawSound) {
+      if (!sampleMsgShown && Audio.loadedSamples > 0) {
+        sampleMsgShown = true;
+        el.audioStatus.textContent =
+          `🥁 Real acoustic drum samples active (${Audio.loadedSamples}/9). The bass, chords & melody are synthesized — that synth is the "electronic" sound.`;
+      } else if (!sampleMsgShown && lvl > 0.02 && !sawSound) {
         sawSound = true;
         el.audioStatus.textContent =
-          "🔊 Audio IS being produced. If you still hear nothing, the sound is leaving the app — check device volume, output device, and (on claude.ai) that the tab isn't muted.";
+          "🔊 Audio is playing. If you hear nothing, check device/output volume and that the tab isn't muted. (Drum samples still loading…)";
       }
       requestAnimationFrame(tick);
     };

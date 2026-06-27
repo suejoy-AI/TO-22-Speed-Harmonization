@@ -346,6 +346,29 @@
       osc.stop(time + dur + 0.05);
     },
 
+    // Melody / lead voice for public-domain songs (the actual tune).
+    lead(time, midi, dur = 0.25, vel = 0.5) {
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+      const o1 = ctx.createOscillator();
+      o1.type = "triangle";
+      o1.frequency.value = freq;
+      const o2 = ctx.createOscillator();
+      o2.type = "sine";
+      o2.frequency.value = freq * 2; // octave shimmer
+      const g = ctx.createGain();
+      const hold = Math.max(0.06, dur * 0.8);
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(vel, time + 0.015);
+      g.gain.setValueAtTime(vel, time + hold);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur + 0.05);
+      const g2 = ctx.createGain();
+      g2.gain.value = 0.28;
+      o2.connect(g2).connect(g);
+      o1.connect(g).connect(master);
+      o1.start(time); o1.stop(time + dur + 0.1);
+      o2.start(time); o2.stop(time + dur + 0.1);
+    },
+
     // Soft chord stab for the backing track
     chord(time, midis, dur = 0.4, vel = 0.18) {
       midis.forEach((m) => {
