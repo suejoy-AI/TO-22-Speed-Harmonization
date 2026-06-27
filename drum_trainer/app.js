@@ -50,7 +50,86 @@
     tempo: 80,
     loopsCompleted: 0,
     isPlaying: false,
+    timeline: null, // array of bars when playing a full song
+    barPos: 0,
+    ending: false,
   };
+
+  // ---- Song arrangement engine -------------------------------------------
+  // A song plays a full structure (intro/verse/chorus/bridge/outro) with groove
+  // variation, fills on transitions, a chord progression, and a real ending —
+  // instead of one looping bar.
+  const SONG_STRUCTURE = {
+    rock: [["Intro",2,"intro"],["Verse",4,"verse"],["Chorus",4,"chorus"],["Verse",4,"verse"],["Chorus",4,"chorus"],["Bridge",2,"intro"],["Chorus",4,"chorus"],["Outro",2,"outro"]],
+    pop:  [["Intro",2,"intro"],["Verse",4,"verse"],["Chorus",4,"chorus"],["Verse",4,"verse"],["Chorus",4,"chorus"],["Bridge",2,"intro"],["Chorus",4,"chorus"],["Outro",2,"outro"]],
+    funk: [["Intro",2,"intro"],["Groove",4,"verse"],["Chorus",4,"chorus"],["Groove",4,"verse"],["Breakdown",2,"intro"],["Chorus",4,"chorus"],["Groove",4,"verse"],["Outro",2,"outro"]],
+    jazz: [["Head A",4,"verse"],["Head B",4,"chorus"],["Solo",8,"chorus"],["Head A",4,"verse"],["Head B",4,"chorus"],["Outro",2,"outro"]],
+  };
+  const SONG_PROG = { rock: [0,0,5,7], pop: [0,7,9,5], funk: [0,0,0,5], jazz: [0,5,7,0] };
+  const BASS_OFFSETS = {
+    rock: [0,null,null,null,null,null,7,null,0,null,null,null,7,null,null,null],
+    pop:  [0,null,null,null,7,null,null,null,0,null,0,null,7,null,null,null],
+    funk: [0,null,0,null,null,0,null,null,7,null,null,0,0,null,null,null],
+    jazz: [0,null,null,null,5,null,null,null,7,null,null,null,10,null,null,null],
+  };
+  const CHORD_SHAPE = { rock: [12,19,24], pop: [12,16,19], funk: [12,15,19], jazz: [12,15,19,22] };
+  const CHORD_STEPS = { rock: [0,8], pop: [0,4,8,12], funk: [0,8], jazz: [0,8] };
+  const FILLS = {
+    rock: { tomHigh:"--------x-x-----", tomMid:"------------x---", tomLow:"-------------x-x", snare:"x-x-x-----------", kick:"x---------------" },
+    pop:  { snare:"----x-x-x-x-xxxx", tomMid:"------------x-x-", tomLow:"--------------xx", kick:"x---------------" },
+    funk: { snare:"x-xx-xx-x-xx-xxx", kick:"x-------x-------" },
+    jazz: { snare:"x-xxx-xxx-xxx-xx", tomMid:"----x-------x---", kick:"x-------x-------" },
+  };
+
+  function introGroove(verse) {
+    const g = {};
+    if (verse.ride) g.ride = verse.ride;
+    else g.hihat = verse.hihat || "x-x-x-x-x-x-x-x-";
+    g.kick = "x-------x-------";
+    return g;
+  }
+  function chorusGroove(ch) {
+    const g = Object.assign({}, ch);
+    g.crash = "x---------------";
+    return g;
+  }
+  function outroGroove(verse, finalBar) {
+    if (finalBar) return { crash: "x---------------", kick: "x-------x-------" };
+    return Object.assign({ crash: "x---------------" }, verse);
+  }
+  function songBacking(root, genre) {
+    const off = BASS_OFFSETS[genre];
+    const bass = off.map((o) => (o === null ? 0 : root + o));
+    const chords = CHORD_STEPS[genre].map((step) => ({
+      step, midis: CHORD_SHAPE[genre].map((iv) => root + iv), dur: 0.5,
+    }));
+    return { bass, chords };
+  }
+  function buildTimeline(song, genre) {
+    const struct = SONG_STRUCTURE[genre];
+    const prog = SONG_PROG[genre];
+    const R = song.root || 40;
+    const bars = [];
+    let pi = 0;
+    struct.forEach(([name, count, kind]) => {
+      for (let bi = 0; bi < count; bi++) {
+        const root = R + prog[pi % prog.length];
+        pi++;
+        const lastOfSection = bi === count - 1;
+        let tracks;
+        if (kind === "verse" && lastOfSection) tracks = FILLS[genre];
+        else if (kind === "intro") tracks = introGroove(song.tracks);
+        else if (kind === "chorus") tracks = chorusGroove(song.gChorus || song.tracks);
+        else if (kind === "outro") tracks = outroGroove(song.tracks, lastOfSection);
+        else tracks = song.tracks;
+        bars.push({ tracks, section: name, backing: songBacking(root, genre) });
+      }
+    });
+    return bars;
+  }
+  function songBarCount(genre) {
+    return SONG_STRUCTURE[genre].reduce((a, s) => a + s[1], 0);
+  }
 
   function currentGenre() { return GENRES[state.genre]; }
   function maxLevel() { return currentGenre().levels.length; }
@@ -64,7 +143,16 @@
     return songMode() ? currentSong() : currentGenre().levels[state.level - 1];
   }
   function currentBacking() {
-    return songMode() ? currentSong().backing : currentGenre().backing;
+    return songMode() ? songBacking(currentSong().root, state.genre) : currentGenre().backing;
+  }
+  // Tracks shown in the grid/tab right now (live bar while a song plays,
+  // otherwise the selected song's main groove or the practice pattern).
+  function displayTracks() {
+    if (songMode() && state.isPlaying && state.timeline) {
+      return state.timeline[Math.min(state.barPos, state.timeline.length - 1)].tracks;
+    }
+    if (songMode()) return currentSong().tracks;
+    return currentPattern().tracks;
   }
 
   // ---- Persistence -------------------------------------------------------
@@ -183,21 +271,21 @@
   }
 
   // ---- Rendering ---------------------------------------------------------
-  // Tracks used by the current pattern, in INSTRUMENTS display order.
-  function usedInstruments() {
-    const p = currentPattern();
-    return INSTRUMENTS.filter((i) => p.tracks[i.key]);
+  // Tracks used by a groove, in INSTRUMENTS display order.
+  function usedInstruments(tracks) {
+    const t = tracks || displayTracks();
+    return INSTRUMENTS.filter((i) => t[i.key]);
   }
 
   let cellRefs = {}; // key -> [cell elements per step]
 
-  function renderGrid() {
-    const p = currentPattern();
+  function renderGrid(tracks) {
+    const t = tracks || displayTracks();
     el.grid.innerHTML = "";
     cellRefs = {};
 
-    usedInstruments().forEach((inst) => {
-      const pattern = p.tracks[inst.key];
+    usedInstruments(t).forEach((inst) => {
+      const pattern = t[inst.key];
       const row = document.createElement("div");
       row.className = "grid-row";
 
@@ -230,18 +318,23 @@
     });
   }
 
-  function renderTab() {
-    const p = currentPattern();
+  function renderTab(tracks) {
+    const t = tracks || displayTracks();
     const lines = [];
     // count ruler
     let ruler = "  |";
     const counts = ["1", "e", "&", "a", "2", "e", "&", "a", "3", "e", "&", "a", "4", "e", "&", "a"];
     ruler += counts.join("");
     lines.push(ruler + "|");
-    usedInstruments().forEach((inst) => {
-      lines.push(inst.tab + "|" + p.tracks[inst.key] + "|");
+    usedInstruments(t).forEach((inst) => {
+      lines.push(inst.tab + "|" + t[inst.key] + "|");
     });
     el.drumTab.textContent = lines.join("\n");
+  }
+
+  function renderBar(tracks) {
+    renderGrid(tracks);
+    renderTab(tracks);
   }
 
   function renderPads() {
@@ -279,7 +372,7 @@
     if (songMode()) {
       const s = currentSong();
       el.patternTitle.textContent = `${currentGenre().label} · ♫ ${s.title} — ${s.artist}`;
-      el.patternTip.textContent = s.tip;
+      el.patternTip.textContent = `${s.tip} · Press Play for the full song (intro → verses → choruses → outro).`;
       el.levelName.textContent = `Playing along: ${s.title}`;
     } else {
       el.patternTitle.textContent = `${currentGenre().label} · Level ${state.level}: ${p.name}`;
@@ -296,8 +389,9 @@
 
   function updateProgressUI() {
     if (songMode()) {
-      el.loopsCount.textContent = "Song mode — free play";
-      el.progressFill.style.width = "100%";
+      if (state.isPlaying && state.timeline) return; // live bar shown by updateSongProgress
+      el.loopsCount.textContent = `Full song ready — ${songBarCount(state.genre)} bars`;
+      el.progressFill.style.width = "0%";
       return;
     }
     if (state.level >= maxLevel()) {
@@ -327,8 +421,14 @@
     return 0;
   }
 
+  function activeBar() {
+    if (songMode() && state.isPlaying && state.timeline) return state.timeline[state.barPos];
+    return { tracks: currentPattern().tracks, backing: currentBacking() };
+  }
+
   function scheduleStep(step, time) {
-    const p = currentPattern();
+    const bar = activeBar();
+    const tracks = bar.tracks;
     const hitTime = time + swingOffset(step);
 
     // metronome (quarter notes)
@@ -337,8 +437,8 @@
     }
 
     // drum voices for this step
-    usedInstruments().forEach((inst) => {
-      const ch = p.tracks[inst.key][step];
+    usedInstruments(tracks).forEach((inst) => {
+      const ch = tracks[inst.key][step];
       if (!ch || ch === "-") return;
       if (ch === "g") {
         Audio.play("ghost", hitTime);
@@ -351,7 +451,7 @@
 
     // backing track
     if (el.backing.checked) {
-      const b = currentBacking();
+      const b = bar.backing;
       if (b) {
         const note = b.bass[step];
         if (note) Audio.play("bass", hitTime, note, stepDuration() * 2);
@@ -360,7 +460,7 @@
       }
     }
 
-    visualQueue.push({ step, time: hitTime });
+    visualQueue.push({ step, time: hitTime, bar: (songMode() && state.timeline) ? state.barPos : undefined });
   }
 
   function advanceNote() {
@@ -368,7 +468,12 @@
     currentStep++;
     if (currentStep >= STEPS) {
       currentStep = 0;
-      onLoopComplete();
+      if (songMode() && state.isPlaying && state.timeline) {
+        state.barPos++;
+        if (state.barPos >= state.timeline.length) state.ending = true; // song finished
+      } else {
+        onLoopComplete();
+      }
     }
   }
 
@@ -403,7 +508,7 @@
 
   function scheduler() {
     const ctx = Audio.ctx;
-    while (nextNoteTime < ctx.currentTime + 0.1) {
+    while (nextNoteTime < ctx.currentTime + 0.1 && !state.ending) {
       if (countInRemaining > 0) {
         // play count-in clicks on the quarter notes of one bar
         if (currentStep % 4 === 0) {
@@ -421,23 +526,56 @@
         advanceNote();
       }
     }
+    if (state.ending) {
+      // let the last bar ring out, then stop and show "complete"
+      const finishAt = nextNoteTime + 0.6;
+      const ms = Math.max(0, (finishAt - ctx.currentTime) * 1000);
+      setTimeout(finishSong, ms);
+      return; // don't re-arm
+    }
     schedulerTimer = setTimeout(scheduler, 25);
+  }
+
+  function finishSong() {
+    stop();
+    state.ending = false;
+    state.timeline = null;
+    el.loopsCount.textContent = "✓ Song complete — press Play to hear it again";
+    el.progressFill.style.width = "100%";
+    renderBar(currentSong().tracks); // back to the preview groove
   }
 
   // ---- Playhead animation ------------------------------------------------
   let lastDrawnStep = -1;
+  let lastDrawnBar = -1;
   function draw() {
     if (!state.isPlaying) return;
     const ctx = Audio.ctx;
     let step = lastDrawnStep;
+    let bar = lastDrawnBar;
     while (visualQueue.length && visualQueue[0].time <= ctx.currentTime) {
-      step = visualQueue.shift().step;
+      const it = visualQueue.shift();
+      step = it.step;
+      if (it.bar !== undefined) bar = it.bar;
+    }
+    // a song moved to a new bar — swap the notation to that bar's groove
+    if (bar !== lastDrawnBar && bar >= 0 && state.timeline && state.timeline[bar]) {
+      renderBar(state.timeline[bar].tracks);
+      updateSongProgress(bar);
+      lastDrawnBar = bar;
+      lastDrawnStep = -1;
     }
     if (step !== lastDrawnStep) {
       highlightStep(step);
       lastDrawnStep = step;
     }
     requestAnimationFrame(draw);
+  }
+
+  function updateSongProgress(bar) {
+    const b = state.timeline[bar];
+    el.loopsCount.textContent = `${b.section} — bar ${bar + 1} / ${state.timeline.length}`;
+    el.progressFill.style.width = `${((bar + 1) / state.timeline.length) * 100}%`;
   }
 
   function highlightStep(step) {
@@ -484,9 +622,15 @@
     Audio.ensureContext();
     if (state.isPlaying) return;
     state.isPlaying = true;
+    state.ending = false;
     currentStep = 0;
     lastDrawnStep = -1;
+    lastDrawnBar = -1;
+    state.barPos = 0;
     visualQueue.length = 0;
+    // build the full-song timeline when a song is selected
+    state.timeline = songMode() ? buildTimeline(currentSong(), state.genre) : null;
+    if (state.timeline) renderBar(state.timeline[0].tracks);
     countInRemaining = el.countin.checked ? 1 : 0;
     nextNoteTime = Audio.ctx.currentTime + 0.1;
     el.play.disabled = true;
@@ -498,6 +642,7 @@
 
   function stop() {
     state.isPlaying = false;
+    state.ending = false;
     if (schedulerTimer) clearTimeout(schedulerTimer);
     schedulerTimer = null;
     visualQueue.length = 0;

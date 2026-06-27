@@ -319,13 +319,12 @@ for (const genre of Object.keys(SONGS)) {
       const R = N[key];
       if (R === undefined) throw new Error(`Unknown key '${key}' for ${title}`);
       const groove = palette[i % palette.length];
-      const bk = BACKING[genre](R);
-      const chords = bk.chordSteps.map((step) => ({ step, midis: bk.chordMidis, dur: 0.5 }));
+      const chorus = palette[(i + 1) % palette.length];
       return {
-        title, artist, bpm, key,
+        title, artist, bpm, key, root: R,
         tip: `${tips[lvl]}  (${artist})`,
-        tracks: groove,
-        backing: { bass: bk.bass, chords },
+        tracks: groove,   // verse / main groove
+        gChorus: chorus,  // a contrasting groove for choruses
       };
     });
   }

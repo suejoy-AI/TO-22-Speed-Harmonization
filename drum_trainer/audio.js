@@ -8,6 +8,7 @@
   let ctx = null;
   let master = null;
   let analyser = null;
+  let reverb = null;
 
   let unlocked = false;
 
@@ -21,6 +22,18 @@
       analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       master.connect(analyser); // tap for the output level meter
+
+      // Light room reverb so the kit sounds like a real kit in a room,
+      // not dry triggered samples. master -> convolver -> wet -> out.
+      try {
+        reverb = ctx.createConvolver();
+        reverb.buffer = makeImpulse(0.6, 2.4);
+        const wet = ctx.createGain();
+        wet.gain.value = 0.16;
+        master.connect(reverb);
+        reverb.connect(wet);
+        wet.connect(ctx.destination);
+      } catch (e) { reverb = null; }
     }
     if (ctx.state === "suspended") ctx.resume();
     loadSamples();
@@ -41,6 +54,23 @@
 
   function now() {
     return ctx ? ctx.currentTime : 0;
+  }
+
+  // Synthesized impulse response for a warm small room. The noise is run
+  // through a one-pole lowpass so the tail isn't a harsh metallic hiss.
+  function makeImpulse(duration, decay) {
+    const len = Math.floor(ctx.sampleRate * duration);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buf.getChannelData(ch);
+      let last = 0;
+      for (let i = 0; i < len; i++) {
+        const white = Math.random() * 2 - 1;
+        last = last + 0.22 * (white - last); // warm (lowpassed) diffuse tail
+        data[i] = last * Math.pow(1 - i / len, decay);
+      }
+    }
+    return buf;
   }
 
   // ---- Sampled acoustic drum kit (CC0 samples in window.DrumSamples) ------
@@ -77,8 +107,11 @@
     if (!buf) return false;
     const src = ctx.createBufferSource();
     src.buffer = buf;
+    // Humanize: real drums never sound identical twice. Vary level and pitch
+    // slightly per hit so repeated notes don't sound machine-gunned.
+    src.playbackRate.value = 1 + (Math.random() * 0.04 - 0.02);
     const g = ctx.createGain();
-    g.gain.value = Math.max(0.0001, vel);
+    g.gain.value = Math.max(0.0001, vel * (0.88 + Math.random() * 0.22));
     src.connect(g).connect(master);
     src.start(time);
     return true;
