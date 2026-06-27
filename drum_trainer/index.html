@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drum Trainer — Learn to Play the Drums</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🥁 Drum Trainer</h1>
+    <p class="tagline">Pick a genre, choose your level, and play along. Level up as you practice.</p>
+  </header>
+
+  <main class="layout">
+    <!-- ============ SETUP / CONTROL PANEL ============ -->
+    <section class="panel controls" aria-label="Controls">
+      <div class="control-group">
+        <label for="genre">Genre</label>
+        <select id="genre"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="level">Level</label>
+        <div class="level-row">
+          <input type="range" id="level" min="1" max="5" step="1" value="1" />
+          <span id="level-badge" class="badge">1</span>
+        </div>
+        <small id="level-name" class="muted"></small>
+      </div>
+
+      <div class="control-group">
+        <label for="tempo">Tempo <span id="tempo-value">90</span> BPM</label>
+        <input type="range" id="tempo" min="50" max="180" step="1" value="90" />
+      </div>
+
+      <div class="control-group toggles">
+        <label class="check"><input type="checkbox" id="metronome" /> Metronome</label>
+        <label class="check"><input type="checkbox" id="backing" checked /> Backing track</label>
+        <label class="check"><input type="checkbox" id="countin" checked /> Count-in</label>
+      </div>
+
+      <div class="transport">
+        <button id="play" class="btn btn-primary">▶ Play</button>
+        <button id="stop" class="btn" disabled>■ Stop</button>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Practice toward next level</span>
+          <span id="loops-count">0 / 4 loops</span>
+        </div>
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <button id="reset-progress" class="btn btn-link">Reset progress</button>
+      </div>
+    </section>
+
+    <!-- ============ NOTATION / PLAY AREA ============ -->
+    <section class="panel stage" aria-label="Drum notation">
+      <div class="stage-header">
+        <h2 id="pattern-title">—</h2>
+        <p id="pattern-tip" class="muted"></p>
+      </div>
+
+      <!-- Visual step-sequencer grid -->
+      <div id="grid" class="grid" role="img" aria-label="Drum pattern grid"></div>
+
+      <!-- Standard text drum tab -->
+      <div class="tab-section">
+        <div class="tab-header">
+          <h3>Drum Notation (tab)</h3>
+          <span class="muted small">x = hit · o = open/accent · — = rest</span>
+        </div>
+        <pre id="drum-tab" class="drum-tab"></pre>
+      </div>
+
+      <!-- Manual practice pads -->
+      <div class="pads-section">
+        <h3>Practice pads <span class="muted small">(keys: A S D F J K)</span></h3>
+        <div id="pads" class="pads"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p class="muted small">Sounds are generated live with the Web Audio API — no downloads required. Works best in Chrome, Edge, or Firefox.</p>
+  </footer>
+
+  <script src="audio.js"></script>
+  <script src="patterns.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
