@@ -14,6 +14,7 @@
   // ---- DOM ---------------------------------------------------------------
   const el = {
     genre: document.getElementById("genre"),
+    song: document.getElementById("song"),
     level: document.getElementById("level"),
     levelBadge: document.getElementById("level-badge"),
     levelName: document.getElementById("level-name"),
@@ -41,6 +42,7 @@
   const state = {
     genre: "rock",
     level: 1, // 1-based
+    song: -1, // -1 = practice patterns (level mode); >=0 = song index
     tempo: 80,
     loopsCompleted: 0,
     isPlaying: false,
@@ -48,7 +50,14 @@
 
   function currentGenre() { return GENRES[state.genre]; }
   function maxLevel() { return currentGenre().levels.length; }
-  function currentPattern() { return currentGenre().levels[state.level - 1]; }
+  function songMode() { return state.song >= 0; }
+  function currentSong() { return currentGenre().songs[state.song]; }
+  function currentPattern() {
+    return songMode() ? currentSong() : currentGenre().levels[state.level - 1];
+  }
+  function currentBacking() {
+    return songMode() ? currentSong().backing : currentGenre().backing;
+  }
 
   // ---- Persistence -------------------------------------------------------
   function save() {
@@ -71,6 +80,21 @@
       opt.textContent = GENRES[key].label;
       el.genre.appendChild(opt);
     });
+  }
+
+  function buildSongOptions() {
+    el.song.innerHTML = "";
+    const none = document.createElement("option");
+    none.value = "-1";
+    none.textContent = "Practice patterns (levels)";
+    el.song.appendChild(none);
+    currentGenre().songs.forEach((s, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${s.title} — ${s.artist}`;
+      el.song.appendChild(opt);
+    });
+    el.song.value = String(state.song);
   }
 
   // ---- Rendering ---------------------------------------------------------
@@ -167,17 +191,30 @@
 
   function refreshPatternUI() {
     const p = currentPattern();
-    el.patternTitle.textContent = `${currentGenre().label} · Level ${state.level}: ${p.name}`;
-    el.patternTip.textContent = p.tip;
-    el.levelBadge.textContent = state.level;
-    el.levelName.textContent = p.name;
-    el.level.value = state.level;
+    if (songMode()) {
+      const s = currentSong();
+      el.patternTitle.textContent = `${currentGenre().label} · ♫ ${s.title} — ${s.artist}`;
+      el.patternTip.textContent = s.tip;
+      el.levelName.textContent = `Playing along: ${s.title}`;
+    } else {
+      el.patternTitle.textContent = `${currentGenre().label} · Level ${state.level}: ${p.name}`;
+      el.patternTip.textContent = p.tip;
+      el.levelBadge.textContent = state.level;
+      el.levelName.textContent = p.name;
+      el.level.value = state.level;
+    }
+    el.song.value = String(state.song);
     renderGrid();
     renderTab();
     updateProgressUI();
   }
 
   function updateProgressUI() {
+    if (songMode()) {
+      el.loopsCount.textContent = "Song mode — free play";
+      el.progressFill.style.width = "100%";
+      return;
+    }
     if (state.level >= maxLevel()) {
       el.loopsCount.textContent = "Max level reached 🎉";
       el.progressFill.style.width = "100%";
@@ -229,7 +266,7 @@
 
     // backing track
     if (el.backing.checked) {
-      const b = currentGenre().backing;
+      const b = currentBacking();
       if (b) {
         const note = b.bass[step];
         if (note) Audio.play("bass", hitTime, note, stepDuration() * 2);
@@ -252,6 +289,7 @@
 
   function onLoopComplete() {
     if (countInRemaining > 0) return; // count-in bars don't count
+    if (songMode()) return; // songs don't auto-advance levels
     if (state.level >= maxLevel()) return;
     state.loopsCompleted++;
     if (state.loopsCompleted >= LOOPS_PER_LEVEL) {
@@ -384,6 +422,7 @@
 
   // ---- Events ------------------------------------------------------------
   function setLevel(level, { resetProgress = true } = {}) {
+    state.song = -1; // choosing a level returns to practice mode
     state.level = Math.max(1, Math.min(level, maxLevel()));
     if (resetProgress) state.loopsCompleted = 0;
     el.tempo.value = currentPattern().bpm;
@@ -393,8 +432,23 @@
     refreshPatternUI();
   }
 
+  function selectSong(idx) {
+    if (idx < 0) {
+      setLevel(state.level); // back to practice patterns
+      return;
+    }
+    state.song = idx;
+    const s = currentSong();
+    el.tempo.value = s.bpm;
+    state.tempo = s.bpm;
+    el.tempoValue.textContent = s.bpm;
+    refreshPatternUI();
+  }
+
   function onGenreChange() {
     state.genre = el.genre.value;
+    state.song = -1;
+    buildSongOptions();
     el.level.max = maxLevel();
     const saved = load();
     const lvl = (saved.levelByGenre && saved.levelByGenre[state.genre]) || 1;
@@ -406,6 +460,10 @@
 
     el.level.addEventListener("input", () => {
       setLevel(parseInt(el.level.value, 10));
+    });
+
+    el.song.addEventListener("change", () => {
+      selectSong(parseInt(el.song.value, 10));
     });
 
     el.tempo.addEventListener("input", () => {
@@ -444,6 +502,7 @@
     const saved = load();
     state.genre = saved.genre && GENRES[saved.genre] ? saved.genre : "rock";
     el.genre.value = state.genre;
+    buildSongOptions();
     el.level.max = maxLevel();
     const lvl = (saved.levelByGenre && saved.levelByGenre[state.genre]) || 1;
     renderPads();

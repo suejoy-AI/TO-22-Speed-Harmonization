@@ -17,6 +17,20 @@ the drum notes — your level rises automatically as you keep practicing.
 - **Pick a genre to play along with.** Rock, Pop, Funk, and Jazz (Swing). Each
   genre plays its own backing track (bass + chord stabs) so you groove along
   with "the song."
+- **Play along with real songs.** Each genre includes famous tracks with their
+  signature drum groove shown in notation and a bass/chord backing to play
+  over. Choosing a song auto-sets its tempo:
+  - **Rock** — *We Will Rock You* (Queen), *Back in Black* (AC/DC)
+  - **Pop** — *Billie Jean* (Michael Jackson), *Rolling in the Deep* (Adele)
+  - **Funk** — *Superstition* (Stevie Wonder), *Uptown Funk* (Mark Ronson ft. Bruno Mars)
+  - **Jazz** — *So What* (Miles Davis), *Autumn Leaves* (standard)
+
+  The backings are simplified, original arrangements (drum groove, bassline,
+  and chords) for practice — not recordings of the songs.
+- **Classic acoustic drum sounds.** The kit is synthesized to sound like a real
+  acoustic drum set (kick with beater click, layered snare, cymbal washes),
+  not a retro electronic kit.
+- **"Test sound" + live meter** to confirm audio is working on your device.
 - **See and learn the drum notes.** Every pattern is shown two ways:
   - a **live step-sequencer grid** with a moving playhead, and
   - standard **text drum tab** (`HH`, `SN`, `KK`, …) with a count ruler

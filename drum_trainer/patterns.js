@@ -93,6 +93,37 @@
         bass: [40, 0, 0, 0, 40, 0, 47, 0, 43, 0, 0, 0, 45, 0, 47, 0],
         chords: chordEvents([52, 55, 59], [0, 8]), // Em
       },
+      songs: [
+        {
+          title: "We Will Rock You",
+          artist: "Queen",
+          bpm: 81,
+          tip: "The famous stomp-stomp-clap. Kick = the two stomps, snare = the clap.",
+          tracks: {
+            snare: "----x-------x---",
+            kick:  "x-x-----x-x-----",
+          },
+          backing: {
+            bass: [40, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0],
+            chords: chordEvents([40, 47, 52], [4, 12]), // E5 stabs on the clap
+          },
+        },
+        {
+          title: "Back in Black",
+          artist: "AC/DC",
+          bpm: 94,
+          tip: "Classic Phil Rudd groove — steady 8th hats with a syncopated kick.",
+          tracks: {
+            hihat: "x-x-x-x-x-x-x-x-",
+            snare: "----x-------x---",
+            kick:  "x-----x-x---x---",
+          },
+          backing: {
+            bass: [40, 0, 0, 0, 0, 0, 45, 0, 38, 0, 0, 0, 45, 0, 0, 0],
+            chords: chordEvents([40, 47, 52], [0, 8]), // E5
+          },
+        },
+      ],
     },
 
     pop: {
@@ -157,6 +188,38 @@
         bass: [48, 0, 48, 0, 53, 0, 0, 0, 45, 0, 45, 0, 50, 0, 0, 0],
         chords: chordEvents([60, 64, 67], [0, 4, 8, 12]), // C
       },
+      songs: [
+        {
+          title: "Billie Jean",
+          artist: "Michael Jackson",
+          bpm: 117,
+          tip: "One of the most famous grooves ever — rock-steady kick on 1 & 3, snare on 2 & 4.",
+          tracks: {
+            hihat: "x-x-x-x-x-x-x-x-",
+            snare: "----x-------x---",
+            kick:  "x-------x-------",
+          },
+          backing: {
+            bass: [42, 0, 0, 0, 49, 0, 0, 0, 46, 0, 42, 0, 49, 0, 46, 0],
+            chords: chordEvents([42, 45, 49], [0, 8]), // F#m
+          },
+        },
+        {
+          title: "Rolling in the Deep",
+          artist: "Adele",
+          bpm: 105,
+          tip: "Driving four-on-the-floor stomp with a hard backbeat on 2 & 4.",
+          tracks: {
+            hihat: "x-x-x-x-x-x-x-x-",
+            snare: "----x-------x---",
+            kick:  "x---x---x---x---",
+          },
+          backing: {
+            bass: [36, 0, 0, 0, 34, 0, 0, 0, 32, 0, 0, 0, 34, 0, 0, 0],
+            chords: chordEvents([36, 39, 43], [0, 8]), // Cm
+          },
+        },
+      ],
     },
 
     funk: {
@@ -222,6 +285,38 @@
         bass: [40, 0, 40, 43, 0, 40, 0, 0, 45, 0, 0, 43, 40, 0, 0, 0],
         chords: chordEvents([52, 55, 59], [0, 6, 10]), // E7-ish stab
       },
+      songs: [
+        {
+          title: "Superstition",
+          artist: "Stevie Wonder",
+          bpm: 100,
+          tip: "Stevie's iconic funk: busy 16th hats, ghost notes, and a snappy backbeat.",
+          tracks: {
+            hihat: "xxxxxxxxxxxxxxxx",
+            snare: "--g-x-g---g-x-g-",
+            kick:  "x-----x---x-----",
+          },
+          backing: {
+            bass: [39, 0, 42, 0, 39, 0, 0, 0, 44, 0, 42, 0, 39, 0, 0, 0],
+            chords: chordEvents([42, 46, 49], [0, 8]), // Ebm7 color
+          },
+        },
+        {
+          title: "Uptown Funk",
+          artist: "Mark Ronson ft. Bruno Mars",
+          bpm: 115,
+          tip: "Tight, struttin' funk pocket — let the kick syncopate against a hard 2 & 4.",
+          tracks: {
+            hihat: "x-xxx-xxx-xxx-xx",
+            snare: "----x-------x---",
+            kick:  "x--x--x---x-----",
+          },
+          backing: {
+            bass: [38, 0, 0, 38, 0, 0, 41, 0, 38, 0, 0, 0, 36, 0, 0, 0],
+            chords: chordEvents([38, 41, 45], [0, 8]), // Dm
+          },
+        },
+      ],
     },
 
     jazz: {
@@ -290,6 +385,40 @@
         bass: [45, 0, 0, 0, 47, 0, 0, 0, 48, 0, 0, 0, 50, 0, 52, 0],
         chords: chordEvents([57, 60, 64], [0, 8]), // Am7 color
       },
+      songs: [
+        {
+          title: "So What",
+          artist: "Miles Davis",
+          bpm: 136,
+          tip: "Modal swing — ride keeps the pulse, snare and kick 'comp' lightly underneath.",
+          tracks: {
+            ride:  "x---x-x-x---x-x-",
+            hihat: "----x-------x---",
+            snare: "------g-----x---",
+            kick:  "x-------x-------",
+          },
+          backing: {
+            bass: [38, 0, 0, 0, 41, 0, 0, 0, 43, 0, 0, 0, 45, 0, 0, 0],
+            chords: chordEvents([45, 48, 52], [0, 8]), // D dorian (Dm7)
+          },
+        },
+        {
+          title: "Autumn Leaves",
+          artist: "Jazz Standard",
+          bpm: 120,
+          tip: "A ii–V–I standard — swing the ride and trade light comps with the bass.",
+          tracks: {
+            ride:  "x---x-x-x---x-x-",
+            hihat: "----x-------x---",
+            snare: "--g---g-g---x-g-",
+            kick:  "x-----x-x-----x-",
+          },
+          backing: {
+            bass: [45, 0, 0, 0, 50, 0, 0, 0, 43, 0, 0, 0, 48, 0, 0, 0],
+            chords: chordEvents([48, 52, 55], [0, 8]), // Am7 -> D7 motion
+          },
+        },
+      ],
     },
   };
 
