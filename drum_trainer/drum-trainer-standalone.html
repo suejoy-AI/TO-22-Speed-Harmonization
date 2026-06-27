@@ -258,8 +258,9 @@ input[type="text"]::placeholder { color: var(--muted); }
       </div>
 
       <div class="control-group toggles">
+        <label class="check"><input type="checkbox" id="drums" checked /> Drums <span class="muted small">(uncheck to play along yourself)</span></label>
+        <label class="check"><input type="checkbox" id="backing" checked /> Backing track (song)</label>
         <label class="check"><input type="checkbox" id="metronome" /> Metronome</label>
-        <label class="check"><input type="checkbox" id="backing" checked /> Backing track</label>
         <label class="check"><input type="checkbox" id="countin" checked /> Count-in</label>
       </div>
 
@@ -1080,6 +1081,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     levelName: document.getElementById("level-name"),
     tempo: document.getElementById("tempo"),
     tempoValue: document.getElementById("tempo-value"),
+    drums: document.getElementById("drums"),
     metronome: document.getElementById("metronome"),
     backing: document.getElementById("backing"),
     countin: document.getElementById("countin"),
@@ -1492,18 +1494,20 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
       Audio.play("click", time, step === 0);
     }
 
-    // drum voices for this step
-    usedInstruments(tracks).forEach((inst) => {
-      const ch = tracks[inst.key][step];
-      if (!ch || ch === "-") return;
-      if (ch === "g") {
-        Audio.play("ghost", hitTime);
-      } else if (ch === "o") {
-        Audio.play(inst.voice === "hihat" ? "openhat" : inst.voice, hitTime, 1);
-      } else {
-        Audio.play(inst.voice, hitTime, 1);
-      }
-    });
+    // drum voices for this step (skip when the user wants to play the drums)
+    if (el.drums.checked) {
+      usedInstruments(tracks).forEach((inst) => {
+        const ch = tracks[inst.key][step];
+        if (!ch || ch === "-") return;
+        if (ch === "g") {
+          Audio.play("ghost", hitTime);
+        } else if (ch === "o") {
+          Audio.play(inst.voice === "hihat" ? "openhat" : inst.voice, hitTime, 1);
+        } else {
+          Audio.play(inst.voice, hitTime, 1);
+        }
+      });
+    }
 
     // backing track
     if (el.backing.checked) {

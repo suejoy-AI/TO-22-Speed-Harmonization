@@ -24,6 +24,7 @@
     levelName: document.getElementById("level-name"),
     tempo: document.getElementById("tempo"),
     tempoValue: document.getElementById("tempo-value"),
+    drums: document.getElementById("drums"),
     metronome: document.getElementById("metronome"),
     backing: document.getElementById("backing"),
     countin: document.getElementById("countin"),
@@ -436,18 +437,20 @@
       Audio.play("click", time, step === 0);
     }
 
-    // drum voices for this step
-    usedInstruments(tracks).forEach((inst) => {
-      const ch = tracks[inst.key][step];
-      if (!ch || ch === "-") return;
-      if (ch === "g") {
-        Audio.play("ghost", hitTime);
-      } else if (ch === "o") {
-        Audio.play(inst.voice === "hihat" ? "openhat" : inst.voice, hitTime, 1);
-      } else {
-        Audio.play(inst.voice, hitTime, 1);
-      }
-    });
+    // drum voices for this step (skip when the user wants to play the drums)
+    if (el.drums.checked) {
+      usedInstruments(tracks).forEach((inst) => {
+        const ch = tracks[inst.key][step];
+        if (!ch || ch === "-") return;
+        if (ch === "g") {
+          Audio.play("ghost", hitTime);
+        } else if (ch === "o") {
+          Audio.play(inst.voice === "hihat" ? "openhat" : inst.voice, hitTime, 1);
+        } else {
+          Audio.play(inst.voice, hitTime, 1);
+        }
+      });
+    }
 
     // backing track
     if (el.backing.checked) {
