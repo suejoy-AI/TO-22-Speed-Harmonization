@@ -110,6 +110,52 @@ input[type="range"] { accent-color: var(--accent); }
   text-decoration: underline; padding: 0; font-size: .85rem; margin-top: 8px;
 }
 
+/* ---------- Song search ---------- */
+.search-group { position: relative; }
+input[type="text"] {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 1rem;
+}
+input[type="text"]::placeholder { color: var(--muted); }
+.search-results {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.search-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+.search-item:last-child { border-bottom: none; }
+.search-item:hover, .search-item.active { background: #283054; }
+.search-item .si-name { font-size: .9rem; }
+.search-item .si-artist { color: var(--muted); font-size: .78rem; }
+.search-item .si-tag {
+  flex: none; font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--bg); background: var(--accent-2);
+  border-radius: 6px; padding: 3px 7px; white-space: nowrap;
+}
+.search-empty { padding: 12px; color: var(--muted); font-size: .85rem; }
+
 /* ---------- Sound check ---------- */
 .sound-check { display: flex; flex-direction: column; gap: 8px; }
 .meter { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; height: 12px; overflow: hidden; }
@@ -180,6 +226,12 @@ input[type="range"] { accent-color: var(--accent); }
   <main class="layout">
     <!-- ============ SETUP / CONTROL PANEL ============ -->
     <section class="panel controls" aria-label="Controls">
+      <div class="control-group search-group">
+        <label for="song-search">🔎 Find a song</label>
+        <input type="text" id="song-search" autocomplete="off" placeholder="Search all songs by title or artist…" />
+        <div id="search-results" class="search-results" hidden></div>
+      </div>
+
       <div class="control-group">
         <label for="genre">Genre</label>
         <select id="genre"></select>
@@ -985,6 +1037,8 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
   // ---- DOM ---------------------------------------------------------------
   const el = {
     genre: document.getElementById("genre"),
+    songSearch: document.getElementById("song-search"),
+    searchResults: document.getElementById("search-results"),
     song: document.getElementById("song"),
     songLabel: document.getElementById("song-label"),
     songHint: document.getElementById("song-hint"),
@@ -1075,6 +1129,80 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     el.song.value = String(state.song);
     if (el.songLabel) el.songLabel.textContent = `Song to play along (Level ${state.level})`;
     if (el.songHint) el.songHint.textContent = `${list.length} songs at this level — raise the level for harder songs.`;
+  }
+
+  // ---- Global song search (across every genre and level) -----------------
+  let songIndex = [];
+  function buildSongIndex() {
+    songIndex = [];
+    const D = window.DrumSongs || {};
+    Object.keys(D).forEach((genre) => {
+      const label = (GENRES[genre] && GENRES[genre].label) || genre;
+      for (let lvl = 1; lvl <= 5; lvl++) {
+        (D[genre][lvl] || []).forEach((s, idx) => {
+          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist });
+        });
+      }
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function hideResults() {
+    el.searchResults.hidden = true;
+    el.searchResults.innerHTML = "";
+  }
+
+  function runSearch() {
+    const q = el.songSearch.value.trim().toLowerCase();
+    if (!q) { hideResults(); return; }
+    const matches = songIndex.filter((s) =>
+      s.title.toLowerCase().indexOf(q) >= 0 || s.artist.toLowerCase().indexOf(q) >= 0
+    ).slice(0, 20);
+    el.searchResults.innerHTML = "";
+    if (!matches.length) {
+      const e = document.createElement("div");
+      e.className = "search-empty";
+      e.textContent = "No songs match that search.";
+      el.searchResults.appendChild(e);
+      el.searchResults.hidden = false;
+      return;
+    }
+    matches.forEach((m, i) => {
+      const row = document.createElement("div");
+      row.className = "search-item" + (i === 0 ? " active" : "");
+      row.innerHTML =
+        `<span><span class="si-name">${escapeHtml(m.title)}</span> ` +
+        `<span class="si-artist">— ${escapeHtml(m.artist)}</span></span>` +
+        `<span class="si-tag">${escapeHtml(m.genreLabel)} · L${m.level}</span>`;
+      row.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        selectGlobalSong(m.genre, m.level, m.idx);
+      });
+      el.searchResults.appendChild(row);
+    });
+    el.searchResults.hidden = false;
+  }
+
+  function selectGlobalSong(genre, level, idx) {
+    state.genre = genre;
+    el.genre.value = genre;
+    el.level.max = maxLevel();
+    state.level = Math.max(1, Math.min(level, maxLevel()));
+    el.level.value = state.level;
+    state.song = idx;
+    buildSongOptions();
+    el.song.value = String(idx);
+    const s = currentSong();
+    if (s) { el.tempo.value = s.bpm; state.tempo = s.bpm; el.tempoValue.textContent = s.bpm; }
+    state.loopsCompleted = 0;
+    save();
+    refreshPatternUI();
+    el.songSearch.value = "";
+    hideResults();
   }
 
   // ---- Rendering ---------------------------------------------------------
@@ -1448,6 +1576,20 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
       selectSong(parseInt(el.song.value, 10));
     });
 
+    el.songSearch.addEventListener("input", runSearch);
+    el.songSearch.addEventListener("focus", runSearch);
+    el.songSearch.addEventListener("blur", () => setTimeout(hideResults, 150));
+    el.songSearch.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        el.songSearch.value = "";
+        hideResults();
+        el.songSearch.blur();
+      } else if (e.key === "Enter") {
+        const first = el.searchResults.querySelector(".search-item");
+        if (first) { e.preventDefault(); first.dispatchEvent(new MouseEvent("mousedown")); }
+      }
+    });
+
     el.tempo.addEventListener("input", () => {
       state.tempo = parseInt(el.tempo.value, 10);
       el.tempoValue.textContent = state.tempo;
@@ -1466,6 +1608,9 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     // keyboard pads
     document.addEventListener("keydown", (e) => {
       if (e.repeat) return;
+      // don't trigger pads/spacebar while typing in a field
+      const tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
       const pad = el.pads.querySelector(`.pad[data-key="${e.key.toLowerCase()}"]`);
       if (pad) {
         e.preventDefault();
@@ -1484,6 +1629,7 @@ window.DrumSongs = {"rock":{"1":[{"title":"We Will Rock You","artist":"Queen","b
     const saved = load();
     state.genre = saved.genre && GENRES[saved.genre] ? saved.genre : "rock";
     el.genre.value = state.genre;
+    buildSongIndex();
     buildSongOptions();
     el.level.max = maxLevel();
     const lvl = (saved.levelByGenre && saved.levelByGenre[state.genre]) || 1;

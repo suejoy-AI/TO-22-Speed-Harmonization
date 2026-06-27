@@ -14,6 +14,8 @@
   // ---- DOM ---------------------------------------------------------------
   const el = {
     genre: document.getElementById("genre"),
+    songSearch: document.getElementById("song-search"),
+    searchResults: document.getElementById("search-results"),
     song: document.getElementById("song"),
     songLabel: document.getElementById("song-label"),
     songHint: document.getElementById("song-hint"),
@@ -104,6 +106,80 @@
     el.song.value = String(state.song);
     if (el.songLabel) el.songLabel.textContent = `Song to play along (Level ${state.level})`;
     if (el.songHint) el.songHint.textContent = `${list.length} songs at this level — raise the level for harder songs.`;
+  }
+
+  // ---- Global song search (across every genre and level) -----------------
+  let songIndex = [];
+  function buildSongIndex() {
+    songIndex = [];
+    const D = window.DrumSongs || {};
+    Object.keys(D).forEach((genre) => {
+      const label = (GENRES[genre] && GENRES[genre].label) || genre;
+      for (let lvl = 1; lvl <= 5; lvl++) {
+        (D[genre][lvl] || []).forEach((s, idx) => {
+          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist });
+        });
+      }
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function hideResults() {
+    el.searchResults.hidden = true;
+    el.searchResults.innerHTML = "";
+  }
+
+  function runSearch() {
+    const q = el.songSearch.value.trim().toLowerCase();
+    if (!q) { hideResults(); return; }
+    const matches = songIndex.filter((s) =>
+      s.title.toLowerCase().indexOf(q) >= 0 || s.artist.toLowerCase().indexOf(q) >= 0
+    ).slice(0, 20);
+    el.searchResults.innerHTML = "";
+    if (!matches.length) {
+      const e = document.createElement("div");
+      e.className = "search-empty";
+      e.textContent = "No songs match that search.";
+      el.searchResults.appendChild(e);
+      el.searchResults.hidden = false;
+      return;
+    }
+    matches.forEach((m, i) => {
+      const row = document.createElement("div");
+      row.className = "search-item" + (i === 0 ? " active" : "");
+      row.innerHTML =
+        `<span><span class="si-name">${escapeHtml(m.title)}</span> ` +
+        `<span class="si-artist">— ${escapeHtml(m.artist)}</span></span>` +
+        `<span class="si-tag">${escapeHtml(m.genreLabel)} · L${m.level}</span>`;
+      row.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        selectGlobalSong(m.genre, m.level, m.idx);
+      });
+      el.searchResults.appendChild(row);
+    });
+    el.searchResults.hidden = false;
+  }
+
+  function selectGlobalSong(genre, level, idx) {
+    state.genre = genre;
+    el.genre.value = genre;
+    el.level.max = maxLevel();
+    state.level = Math.max(1, Math.min(level, maxLevel()));
+    el.level.value = state.level;
+    state.song = idx;
+    buildSongOptions();
+    el.song.value = String(idx);
+    const s = currentSong();
+    if (s) { el.tempo.value = s.bpm; state.tempo = s.bpm; el.tempoValue.textContent = s.bpm; }
+    state.loopsCompleted = 0;
+    save();
+    refreshPatternUI();
+    el.songSearch.value = "";
+    hideResults();
   }
 
   // ---- Rendering ---------------------------------------------------------
@@ -477,6 +553,20 @@
       selectSong(parseInt(el.song.value, 10));
     });
 
+    el.songSearch.addEventListener("input", runSearch);
+    el.songSearch.addEventListener("focus", runSearch);
+    el.songSearch.addEventListener("blur", () => setTimeout(hideResults, 150));
+    el.songSearch.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        el.songSearch.value = "";
+        hideResults();
+        el.songSearch.blur();
+      } else if (e.key === "Enter") {
+        const first = el.searchResults.querySelector(".search-item");
+        if (first) { e.preventDefault(); first.dispatchEvent(new MouseEvent("mousedown")); }
+      }
+    });
+
     el.tempo.addEventListener("input", () => {
       state.tempo = parseInt(el.tempo.value, 10);
       el.tempoValue.textContent = state.tempo;
@@ -495,6 +585,9 @@
     // keyboard pads
     document.addEventListener("keydown", (e) => {
       if (e.repeat) return;
+      // don't trigger pads/spacebar while typing in a field
+      const tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
       const pad = el.pads.querySelector(`.pad[data-key="${e.key.toLowerCase()}"]`);
       if (pad) {
         e.preventDefault();
@@ -513,6 +606,7 @@
     const saved = load();
     state.genre = saved.genre && GENRES[saved.genre] ? saved.genre : "rock";
     el.genre.value = state.genre;
+    buildSongIndex();
     buildSongOptions();
     el.level.max = maxLevel();
     const lvl = (saved.levelByGenre && saved.levelByGenre[state.genre]) || 1;

@@ -15,6 +15,12 @@
   <main class="layout">
     <!-- ============ SETUP / CONTROL PANEL ============ -->
     <section class="panel controls" aria-label="Controls">
+      <div class="control-group search-group">
+        <label for="song-search">🔎 Find a song</label>
+        <input type="text" id="song-search" autocomplete="off" placeholder="Search all songs by title or artist…" />
+        <div id="search-results" class="search-results" hidden></div>
+      </div>
+
       <div class="control-group">
         <label for="genre">Genre</label>
         <select id="genre"></select>
