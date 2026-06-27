@@ -23,6 +23,7 @@
       master.connect(analyser); // tap for the output level meter
     }
     if (ctx.state === "suspended") ctx.resume();
+    loadSamples();
     // Safari/iOS and some sandboxed iframes only "unlock" audio when a sound
     // is started synchronously inside the user gesture. Play a silent blip.
     if (!unlocked) {
@@ -40,6 +41,47 @@
 
   function now() {
     return ctx ? ctx.currentTime : 0;
+  }
+
+  // ---- Sampled acoustic drum kit (CC0 samples in window.DrumSamples) ------
+  const SAMPLE_NAMES = ["kick", "snare", "hihat", "openhat", "ride", "crash", "tomHigh", "tomMid", "tomLow"];
+  const buffers = {};
+  let samplesRequested = false;
+
+  function b64ToArrayBuffer(dataUri) {
+    const b64 = dataUri.indexOf(",") >= 0 ? dataUri.slice(dataUri.indexOf(",") + 1) : dataUri;
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  function loadSamples() {
+    if (samplesRequested || !global.DrumSamples) return;
+    samplesRequested = true;
+    SAMPLE_NAMES.forEach((name) => {
+      const uri = global.DrumSamples[name];
+      if (!uri) return;
+      try {
+        ctx.decodeAudioData(
+          b64ToArrayBuffer(uri),
+          (buf) => { buffers[name] = buf; },
+          () => { /* fall back to synth voice for this drum */ }
+        );
+      } catch (e) { /* fall back to synth */ }
+    });
+  }
+
+  function playSample(name, time, vel) {
+    const buf = buffers[name];
+    if (!buf) return false;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = Math.max(0.0001, vel);
+    src.connect(g).connect(master);
+    src.start(time);
+    return true;
   }
 
   // Reusable white-noise buffer for snare/hats/crash.
@@ -289,6 +331,13 @@
   };
 
   function play(name, time, ...args) {
+    // Prefer the real acoustic samples; fall back to synthesis if not loaded.
+    const vel = typeof args[0] === "number" ? args[0] : 1;
+    if (name === "ghost") {
+      if (playSample("snare", time, 0.3)) return;
+    } else if (SAMPLE_NAMES.indexOf(name) >= 0) {
+      if (playSample(name, time, vel * 0.9)) return;
+    }
     if (voices[name]) voices[name](time, ...args);
   }
 
@@ -333,5 +382,6 @@
     get ctx() { return ctx; },
     get master() { return master; },
     get analyser() { return analyser; },
+    get loadedSamples() { return Object.keys(buffers).length; },
   };
 })(window);
