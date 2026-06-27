@@ -7,6 +7,7 @@
 
   let ctx = null;
   let master = null;
+  let analyser = null;
 
   let unlocked = false;
 
@@ -15,8 +16,11 @@
       const AC = global.AudioContext || global.webkitAudioContext;
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = 0.9;
+      master.gain.value = 1.0;
       master.connect(ctx.destination);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      master.connect(analyser); // tap for the output level meter
     }
     if (ctx.state === "suspended") ctx.resume();
     // Safari/iOS and some sandboxed iframes only "unlock" audio when a sound
@@ -215,11 +219,46 @@
     if (voices[name]) voices[name](time, ...args);
   }
 
+  // A loud, unmistakable test tone for diagnosing "I can't hear anything".
+  function testTone() {
+    ensureContext();
+    const t = ctx.currentTime + 0.02;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(587, t);        // D5
+    osc.frequency.setValueAtTime(880, t + 0.25); // A5
+    osc.frequency.setValueAtTime(587, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.7, t + 0.02);
+    g.gain.setValueAtTime(0.7, t + 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+    osc.connect(g).connect(master);
+    osc.start(t);
+    osc.stop(t + 0.9);
+  }
+
+  // Current output level (0..1), read from the analyser tap.
+  function level() {
+    if (!analyser) return 0;
+    const buf = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(buf);
+    let max = 0;
+    for (let i = 0; i < buf.length; i++) {
+      const d = Math.abs(buf[i] - 128);
+      if (d > max) max = d;
+    }
+    return max / 128;
+  }
+
   global.DrumAudio = {
     ensureContext,
     now,
     play,
+    testTone,
+    level,
     get ctx() { return ctx; },
     get master() { return master; },
+    get analyser() { return analyser; },
   };
 })(window);

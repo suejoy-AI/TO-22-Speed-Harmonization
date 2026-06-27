@@ -109,6 +109,11 @@ input[type="range"] { accent-color: var(--accent); }
   text-decoration: underline; padding: 0; font-size: .85rem; margin-top: 8px;
 }
 
+/* ---------- Sound check ---------- */
+.sound-check { display: flex; flex-direction: column; gap: 8px; }
+.meter { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; height: 12px; overflow: hidden; }
+.meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--good), #ffd166, var(--accent)); transition: width .06s linear; }
+
 /* ---------- Progress ---------- */
 .progress-wrap { border-top: 1px solid var(--line); padding-top: 14px; }
 .progress-label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }

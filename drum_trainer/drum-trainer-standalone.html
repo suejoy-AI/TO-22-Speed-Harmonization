@@ -110,6 +110,11 @@ input[type="range"] { accent-color: var(--accent); }
   text-decoration: underline; padding: 0; font-size: .85rem; margin-top: 8px;
 }
 
+/* ---------- Sound check ---------- */
+.sound-check { display: flex; flex-direction: column; gap: 8px; }
+.meter { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; height: 12px; overflow: hidden; }
+.meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--good), #ffd166, var(--accent)); transition: width .06s linear; }
+
 /* ---------- Progress ---------- */
 .progress-wrap { border-top: 1px solid var(--line); padding-top: 14px; }
 .progress-label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
@@ -205,6 +210,14 @@ input[type="range"] { accent-color: var(--accent); }
         <button id="stop" class="btn" disabled>■ Stop</button>
       </div>
 
+      <div class="control-group sound-check">
+        <button id="test-sound" class="btn">🔊 Test sound</button>
+        <div class="meter" title="Live audio output level">
+          <div id="meter-fill" class="meter-fill"></div>
+        </div>
+        <small id="audio-status" class="muted small">Press “Test sound” — if the bar moves but you hear nothing, check your device/output volume.</small>
+      </div>
+
       <div class="progress-wrap">
         <div class="progress-label">
           <span>Practice toward next level</span>
@@ -256,6 +269,7 @@ input[type="range"] { accent-color: var(--accent); }
 
   let ctx = null;
   let master = null;
+  let analyser = null;
 
   let unlocked = false;
 
@@ -264,8 +278,11 @@ input[type="range"] { accent-color: var(--accent); }
       const AC = global.AudioContext || global.webkitAudioContext;
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = 0.9;
+      master.gain.value = 1.0;
       master.connect(ctx.destination);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      master.connect(analyser); // tap for the output level meter
     }
     if (ctx.state === "suspended") ctx.resume();
     // Safari/iOS and some sandboxed iframes only "unlock" audio when a sound
@@ -464,12 +481,47 @@ input[type="range"] { accent-color: var(--accent); }
     if (voices[name]) voices[name](time, ...args);
   }
 
+  // A loud, unmistakable test tone for diagnosing "I can't hear anything".
+  function testTone() {
+    ensureContext();
+    const t = ctx.currentTime + 0.02;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(587, t);        // D5
+    osc.frequency.setValueAtTime(880, t + 0.25); // A5
+    osc.frequency.setValueAtTime(587, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.7, t + 0.02);
+    g.gain.setValueAtTime(0.7, t + 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+    osc.connect(g).connect(master);
+    osc.start(t);
+    osc.stop(t + 0.9);
+  }
+
+  // Current output level (0..1), read from the analyser tap.
+  function level() {
+    if (!analyser) return 0;
+    const buf = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(buf);
+    let max = 0;
+    for (let i = 0; i < buf.length; i++) {
+      const d = Math.abs(buf[i] - 128);
+      if (d > max) max = d;
+    }
+    return max / 128;
+  }
+
   global.DrumAudio = {
     ensureContext,
     now,
     play,
+    testTone,
+    level,
     get ctx() { return ctx; },
     get master() { return master; },
+    get analyser() { return analyser; },
   };
 })(window);
 
@@ -801,6 +853,9 @@ input[type="range"] { accent-color: var(--accent); }
     countin: document.getElementById("countin"),
     play: document.getElementById("play"),
     stop: document.getElementById("stop"),
+    testSound: document.getElementById("test-sound"),
+    meterFill: document.getElementById("meter-fill"),
+    audioStatus: document.getElementById("audio-status"),
     loopsCount: document.getElementById("loops-count"),
     progressFill: document.getElementById("progress-fill"),
     resetProgress: document.getElementById("reset-progress"),
@@ -1104,6 +1159,31 @@ input[type="range"] { accent-color: var(--accent); }
     });
   }
 
+  // ---- Output level meter (sound diagnostics) ----------------------------
+  let meterRunning = false;
+  let sawSound = false;
+  function startMeter() {
+    if (meterRunning) return;
+    meterRunning = true;
+    const tick = () => {
+      const lvl = Audio.level();
+      el.meterFill.style.width = Math.min(100, Math.round(lvl * 140)) + "%";
+      if (lvl > 0.02 && !sawSound) {
+        sawSound = true;
+        el.audioStatus.textContent =
+          "🔊 Audio IS being produced. If you still hear nothing, the sound is leaving the app — check device volume, output device, and (on claude.ai) that the tab isn't muted.";
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function testSound() {
+    Audio.testTone();
+    el.audioStatus.textContent = "Playing a test tone…";
+    startMeter();
+  }
+
   // ---- Transport ---------------------------------------------------------
   function play() {
     Audio.ensureContext();
@@ -1118,6 +1198,7 @@ input[type="range"] { accent-color: var(--accent); }
     el.stop.disabled = false;
     scheduler();
     requestAnimationFrame(draw);
+    startMeter();
   }
 
   function stop() {
@@ -1163,6 +1244,7 @@ input[type="range"] { accent-color: var(--accent); }
 
     el.play.addEventListener("click", play);
     el.stop.addEventListener("click", stop);
+    el.testSound.addEventListener("click", testSound);
 
     el.resetProgress.addEventListener("click", () => {
       localStorage.removeItem(STORAGE_KEY);

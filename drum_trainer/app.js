@@ -24,6 +24,9 @@
     countin: document.getElementById("countin"),
     play: document.getElementById("play"),
     stop: document.getElementById("stop"),
+    testSound: document.getElementById("test-sound"),
+    meterFill: document.getElementById("meter-fill"),
+    audioStatus: document.getElementById("audio-status"),
     loopsCount: document.getElementById("loops-count"),
     progressFill: document.getElementById("progress-fill"),
     resetProgress: document.getElementById("reset-progress"),
@@ -327,6 +330,31 @@
     });
   }
 
+  // ---- Output level meter (sound diagnostics) ----------------------------
+  let meterRunning = false;
+  let sawSound = false;
+  function startMeter() {
+    if (meterRunning) return;
+    meterRunning = true;
+    const tick = () => {
+      const lvl = Audio.level();
+      el.meterFill.style.width = Math.min(100, Math.round(lvl * 140)) + "%";
+      if (lvl > 0.02 && !sawSound) {
+        sawSound = true;
+        el.audioStatus.textContent =
+          "🔊 Audio IS being produced. If you still hear nothing, the sound is leaving the app — check device volume, output device, and (on claude.ai) that the tab isn't muted.";
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function testSound() {
+    Audio.testTone();
+    el.audioStatus.textContent = "Playing a test tone…";
+    startMeter();
+  }
+
   // ---- Transport ---------------------------------------------------------
   function play() {
     Audio.ensureContext();
@@ -341,6 +369,7 @@
     el.stop.disabled = false;
     scheduler();
     requestAnimationFrame(draw);
+    startMeter();
   }
 
   function stop() {
@@ -386,6 +415,7 @@
 
     el.play.addEventListener("click", play);
     el.stop.addEventListener("click", stop);
+    el.testSound.addEventListener("click", testSound);
 
     el.resetProgress.addEventListener("click", () => {
       localStorage.removeItem(STORAGE_KEY);
