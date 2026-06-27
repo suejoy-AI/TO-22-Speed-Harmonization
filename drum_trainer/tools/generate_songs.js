@@ -300,6 +300,77 @@ const SONGS = {
   },
 };
 
+// ---- Distinct per-song grooves + accurate signature beats ----------------
+function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h * 31) + s.charCodeAt(i)) | 0; return Math.abs(h); }
+
+const KICKS = {
+  1: ["x-------x-------", "x---x---x---x---", "x-------x-x-----", "x-x-----x-x-----", "x-----x-x-------"],
+  2: ["x-----x-x-------", "x---x---x-x-x---", "x--x--x-x--x----", "x-----x-x---x---", "x-x---x-x-x-----", "x---x-x-x---x---"],
+  3: ["x-----x-x---x---", "x--x--x---x-x---", "x---x-x-x--x-x--", "x-x---x-x-x---x-", "x--x--x-x-x-----", "x-x-x---x-x-x---"],
+  4: ["x--x--x-x--x--x-", "x-x--x-x-x-x--x-", "x--x-x-x--x-x---", "x-x-x-x-x-x-x-x-", "x--x--x---x-x-x-", "x-x--xx-x-x--x--"],
+  5: ["xx-xxx-xxx-xxx-x", "x-xxx-xxx-xxx-xx", "xxx-xxx-xxx-xxx-", "x-x-xx-x-x-xx-x-", "xx-x-xx-xx-x-xx-", "x-xx-xx-x-xx-xx-"],
+};
+const JKICKS = ["x-------x-------", "x-----x-x-----x-", "x-------x-------", "x---x-x-x---x-x-", "x-----x-x-------"];
+const BASE = {
+  rock: { hat: "x-x-x-x-x-x-x-x-", hat16: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", snareG: "--g-x-------x-g-" },
+  pop:  { hat: "x-x-x-x-x-x-x-x-", hat16: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", snareG: "--g-x---g-g-x-g-" },
+  funk: { hat: "xxxxxxxxxxxxxxxx", hat16: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", snareG: "--g-x-g---g-x-g-" },
+};
+
+// Accurate, recognizable signature beats for iconic songs (rhythms aren't
+// copyrightable). Keyed by lowercase title. chorus optional.
+const SIG = {
+  "we will rock you": { verse: { snare: "----x-------x---", kick: "x-x-----x-x-----" } },
+  "billie jean": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "back in black": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x---x---" } },
+  "smoke on the water": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-x-----" } },
+  "highway to hell": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "seven nation army": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "--------x-------", kick: "x-------x-x-----" } },
+  "blitzkrieg bop": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "enter sandman": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x--x----x-x-----" } },
+  "master of puppets": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "xxx-xxx-xxx-xxx-" } },
+  "paranoid": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-x-----x-x-----" } },
+  "stayin' alive": { verse: { openhat: "--o---o---o---o-", hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "shake it off": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "happy": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "superstition": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "--g-x-g---g-x-g-", kick: "x-----x---x-----" } },
+  "funky drummer": { verse: { hihat: "xxxxxxxxxxxxxxxx", openhat: "--------------o-", snare: "---gx-g-g-gxx-g-", kick: "x--x--x---x-----" } },
+  "cold sweat": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x--x----x-x-----" } },
+  "sex machine": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x--x--x---x-----" } },
+  "chameleon": { verse: { hihat: "x-xxx-xxx-xxx-xx", snare: "----x-------x---", kick: "x-------x-x-----" } },
+  "brick house": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x-x-----" } },
+  "super freak": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "cissy strut": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
+  "so what": { verse: { ride: "x---x-x-x---x-x-", hihat: "----x-------x---", snare: "------g-----x---", kick: "x-------x-------" } },
+  "take five": { verse: { ride: "x---x-x-x---x-x-", hihat: "----x-------x---", snare: "------g-------g-", kick: "x-------x-------" } },
+};
+
+function buildGroove(genre, lvl, title) {
+  const h = hashStr(title);
+  if (genre === "jazz") {
+    const snare = lvl >= 3 ? "--g-x-g---g-x-g-" : (lvl === 2 ? "------g-----g---" : "------g-------g-");
+    const verse = { ride: "x---x-x-x---x-x-", hihat: "----x-------x---", snare, kick: JKICKS[h % JKICKS.length] };
+    const chorus = { ride: "x---x-x-x---x-x-", hihat: "----x-------x---", snare: "--g-x-g-g-g-x-g-", kick: JKICKS[(h + 2) % JKICKS.length] };
+    return { verse, chorus };
+  }
+  const b = BASE[genre];
+  const use16 = genre === "funk" || (lvl >= 3 && h % 3 === 0);
+  const useGhost = (genre === "funk" && lvl >= 2) || (lvl >= 2 && h % 2 === 0);
+  const hat = use16 ? b.hat16 : b.hat;
+  const snare = useGhost ? b.snareG : b.snare;
+  const verse = { hihat: hat, snare, kick: KICKS[lvl][h % KICKS[lvl].length] };
+  const cl = Math.min(lvl + 1, 5);
+  const chorus = { hihat: hat, snare, kick: KICKS[cl][(h + 3) % KICKS[cl].length] };
+  if (h % 2 === 0) chorus.openhat = "--------------o-";
+  return { verse, chorus };
+}
+
+function grooveFor(genre, lvl, title) {
+  const sig = SIG[title.toLowerCase()];
+  if (sig) return { verse: sig.verse, chorus: sig.chorus || sig.verse };
+  return buildGroove(genre, lvl, title);
+}
+
 // ---- Build ---------------------------------------------------------------
 const out = {};
 const tips = {
@@ -313,18 +384,17 @@ const tips = {
 for (const genre of Object.keys(SONGS)) {
   out[genre] = {};
   for (let lvl = 1; lvl <= 5; lvl++) {
-    const palette = G[genre][lvl];
-    out[genre][lvl] = SONGS[genre][lvl].map((s, i) => {
+    out[genre][lvl] = SONGS[genre][lvl].map((s) => {
       const [title, artist, bpm, key] = s;
       const R = N[key];
       if (R === undefined) throw new Error(`Unknown key '${key}' for ${title}`);
-      const groove = palette[i % palette.length];
-      const chorus = palette[(i + 1) % palette.length];
+      const g = grooveFor(genre, lvl, title);
+      const signature = !!SIG[title.toLowerCase()];
       return {
-        title, artist, bpm, key, root: R,
-        tip: `${tips[lvl]}  (${artist})`,
-        tracks: groove,   // verse / main groove
-        gChorus: chorus,  // a contrasting groove for choruses
+        title, artist, bpm, key, root: R, sig: signature,
+        tip: signature ? `Signature beat — the real groove of this song.  (${artist})` : `${tips[lvl]}  (${artist})`,
+        tracks: g.verse,
+        gChorus: g.chorus,
       };
     });
   }

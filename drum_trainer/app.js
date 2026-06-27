@@ -664,6 +664,9 @@
       if (s._classic) {
         el.patternTitle.textContent = `${currentGenre().label} · 🎵 ${s.title} — ${s.artist}`;
         el.patternTip.textContent = `${s.tip} This is the real, public-domain melody & lyrics.`;
+      } else if (s.sig) {
+        el.patternTitle.textContent = `${currentGenre().label} · ${s.title} — ${s.artist}`;
+        el.patternTip.textContent = `🥁 Signature drum beat — the real groove of this song. (The bass/chord backing is synthesized; the original recording is copyrighted.) Mute Drums to play it yourself.`;
       } else {
         el.patternTitle.textContent = `${currentGenre().label} · ${s.title} — ${s.artist} (practice groove)`;
         el.patternTip.textContent = `Drum groove + bass/chord backing in this song's key (${s.key || "?"}) at ${s.bpm} BPM — NOT the original recording or melody (those are copyrighted, so it won't sound like the real track). Mute Drums to play along.`;
