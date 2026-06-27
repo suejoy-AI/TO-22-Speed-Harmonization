@@ -15,6 +15,8 @@
   const el = {
     genre: document.getElementById("genre"),
     song: document.getElementById("song"),
+    songLabel: document.getElementById("song-label"),
+    songHint: document.getElementById("song-hint"),
     level: document.getElementById("level"),
     levelBadge: document.getElementById("level-badge"),
     levelName: document.getElementById("level-name"),
@@ -51,7 +53,11 @@
   function currentGenre() { return GENRES[state.genre]; }
   function maxLevel() { return currentGenre().levels.length; }
   function songMode() { return state.song >= 0; }
-  function currentSong() { return currentGenre().songs[state.song]; }
+  function currentSongList() {
+    const byGenre = window.DrumSongs && window.DrumSongs[state.genre];
+    return (byGenre && byGenre[state.level]) || [];
+  }
+  function currentSong() { return currentSongList()[state.song]; }
   function currentPattern() {
     return songMode() ? currentSong() : currentGenre().levels[state.level - 1];
   }
@@ -86,15 +92,18 @@
     el.song.innerHTML = "";
     const none = document.createElement("option");
     none.value = "-1";
-    none.textContent = "Practice patterns (levels)";
+    none.textContent = "Practice patterns (no song)";
     el.song.appendChild(none);
-    currentGenre().songs.forEach((s, i) => {
+    const list = currentSongList();
+    list.forEach((s, i) => {
       const opt = document.createElement("option");
       opt.value = String(i);
       opt.textContent = `${s.title} — ${s.artist}`;
       el.song.appendChild(opt);
     });
     el.song.value = String(state.song);
+    if (el.songLabel) el.songLabel.textContent = `Song to play along (Level ${state.level})`;
+    if (el.songHint) el.songHint.textContent = `${list.length} songs at this level — raise the level for harder songs.`;
   }
 
   // ---- Rendering ---------------------------------------------------------
@@ -304,6 +313,7 @@
     save();
     // celebratory crash, then swap to the new pattern's notation
     Audio.play("crash", Audio.now() + 0.02);
+    buildSongOptions(); // unlock this level's songs
     refreshPatternUI();
     flashLevelUp();
   }
@@ -425,6 +435,7 @@
     state.song = -1; // choosing a level returns to practice mode
     state.level = Math.max(1, Math.min(level, maxLevel()));
     if (resetProgress) state.loopsCompleted = 0;
+    buildSongOptions(); // songs are per-level
     el.tempo.value = currentPattern().bpm;
     state.tempo = currentPattern().bpm;
     el.tempoValue.textContent = state.tempo;

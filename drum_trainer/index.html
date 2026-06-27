@@ -30,8 +30,9 @@
       </div>
 
       <div class="control-group">
-        <label for="song">Song to play along</label>
+        <label for="song" id="song-label">Song to play along</label>
         <select id="song"></select>
+        <small id="song-hint" class="muted small"></small>
       </div>
 
       <div class="control-group">
@@ -96,12 +97,13 @@
   </main>
 
   <footer class="app-footer">
-    <p class="muted small">Sounds are generated live with the Web Audio API — no downloads required. Works best in Chrome, Edge, or Firefox.</p>
+    <p class="muted small">Real (CC0) acoustic drum samples plus a synthesized backing track, all self-contained — no downloads required. Works best in Chrome, Edge, or Firefox.</p>
   </footer>
 
   <script src="samples.js"></script>
   <script src="audio.js"></script>
   <script src="patterns.js"></script>
+  <script src="songs.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
