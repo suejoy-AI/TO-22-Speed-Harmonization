@@ -257,6 +257,8 @@ input[type="range"] { accent-color: var(--accent); }
   let ctx = null;
   let master = null;
 
+  let unlocked = false;
+
   function ensureContext() {
     if (!ctx) {
       const AC = global.AudioContext || global.webkitAudioContext;
@@ -266,6 +268,18 @@ input[type="range"] { accent-color: var(--accent); }
       master.connect(ctx.destination);
     }
     if (ctx.state === "suspended") ctx.resume();
+    // Safari/iOS and some sandboxed iframes only "unlock" audio when a sound
+    // is started synchronously inside the user gesture. Play a silent blip.
+    if (!unlocked) {
+      try {
+        const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+        unlocked = true;
+      } catch (e) { /* ignore */ }
+    }
     return ctx;
   }
 
@@ -455,6 +469,7 @@ input[type="range"] { accent-color: var(--accent); }
     now,
     play,
     get ctx() { return ctx; },
+    get master() { return master; },
   };
 })(window);
 
