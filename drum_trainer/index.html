@@ -41,6 +41,32 @@
         <small id="song-hint" class="muted small"></small>
       </div>
 
+      <details class="manage">
+        <summary>➕ Add / manage songs</summary>
+        <div class="manage-body">
+          <p class="muted small">Add your own song to practice with. Live internet search isn’t available inside this sandboxed page, so use the lookup link to find a song’s tempo/feel, then enter it here. Added songs are saved in your browser.</p>
+          <input id="cs-title" type="text" placeholder="Song title" autocomplete="off" />
+          <input id="cs-artist" type="text" placeholder="Artist" autocomplete="off" />
+          <div class="manage-row">
+            <select id="cs-genre" aria-label="Genre"></select>
+            <select id="cs-level" aria-label="Level"></select>
+          </div>
+          <div class="manage-row">
+            <input id="cs-bpm" type="number" min="40" max="220" value="100" aria-label="Tempo (BPM)" />
+            <select id="cs-key" aria-label="Key"></select>
+          </div>
+          <div class="manage-row">
+            <button id="cs-add" class="btn btn-primary">Add song</button>
+            <a id="cs-lookup" class="btn" href="https://www.google.com/search?q=drum+beat" target="_blank" rel="noopener">🔗 Look&nbsp;up</a>
+          </div>
+          <div id="cs-msg" class="muted small"></div>
+          <hr class="manage-hr" />
+          <label class="muted small" for="cs-move">Change the selected song’s level</label>
+          <select id="cs-move" aria-label="Move selected song to level"></select>
+          <div id="cs-list" class="cs-list"></div>
+        </div>
+      </details>
+
       <div class="control-group">
         <label for="tempo">Tempo <span id="tempo-value">90</span> BPM</label>
         <input type="range" id="tempo" min="50" max="180" step="1" value="90" />

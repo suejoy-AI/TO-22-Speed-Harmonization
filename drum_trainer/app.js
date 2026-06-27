@@ -19,6 +19,17 @@
     song: document.getElementById("song"),
     songLabel: document.getElementById("song-label"),
     songHint: document.getElementById("song-hint"),
+    csTitle: document.getElementById("cs-title"),
+    csArtist: document.getElementById("cs-artist"),
+    csGenre: document.getElementById("cs-genre"),
+    csLevel: document.getElementById("cs-level"),
+    csBpm: document.getElementById("cs-bpm"),
+    csKey: document.getElementById("cs-key"),
+    csAdd: document.getElementById("cs-add"),
+    csLookup: document.getElementById("cs-lookup"),
+    csMsg: document.getElementById("cs-msg"),
+    csMove: document.getElementById("cs-move"),
+    csList: document.getElementById("cs-list"),
     level: document.getElementById("level"),
     levelBadge: document.getElementById("level-badge"),
     levelName: document.getElementById("level-name"),
@@ -135,8 +146,59 @@
   function currentGenre() { return GENRES[state.genre]; }
   function maxLevel() { return currentGenre().levels.length; }
   function songMode() { return state.song >= 0; }
+
+  // ---- Song database: built-in songs + user songs + level overrides ------
+  const CUSTOM_KEY = "drumTrainer.custom.v1";
+  const NOTE_MIDI = { C: 36, "C#": 37, D: 38, "D#": 39, E: 40, F: 41, "F#": 42, G: 43, "G#": 44, A: 45, "A#": 46, B: 47 };
+  let SONGDB = {};
+
+  function loadCustom() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)) || { songs: [], overrides: {} }; }
+    catch (e) { return { songs: [], overrides: {} }; }
+  }
+  function saveCustom(d) {
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(d)); } catch (e) { /* ignore */ }
+  }
+
+  // Grooves for a user song come from the practice patterns of its genre+level.
+  function patternsFor(genre, level) {
+    const lv = GENRES[genre].levels;
+    const vi = Math.min(Math.max(level, 1), lv.length) - 1;
+    const ci = Math.min(vi + 1, lv.length - 1);
+    return { verse: lv[vi].tracks, chorus: lv[ci].tracks };
+  }
+
+  function buildSongDB() {
+    SONGDB = {};
+    const base = window.DrumSongs || {};
+    const custom = loadCustom();
+    const overrides = custom.overrides || {};
+    Object.keys(base).forEach((genre) => {
+      SONGDB[genre] = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+      for (let lvl = 1; lvl <= 5; lvl++) {
+        (base[genre][lvl] || []).forEach((s) => {
+          const key = genre + "" + s.title + "" + s.artist;
+          const eff = overrides[key] || lvl;
+          SONGDB[genre][eff].push(Object.assign({}, s, { _key: key, _genre: genre, _level: eff, _builtin: true }));
+        });
+      }
+    });
+    (custom.songs || []).forEach((cs) => {
+      if (!SONGDB[cs.genre]) return;
+      const lvl = Math.min(Math.max(cs.level, 1), 5);
+      const pat = patternsFor(cs.genre, lvl);
+      SONGDB[cs.genre][lvl].push({
+        title: cs.title, artist: cs.artist || "Custom", bpm: cs.bpm || 100,
+        key: cs.key || "C", root: cs.root != null ? cs.root : 40,
+        tip: `Your song — ${GENRES[cs.genre].label} · Level ${lvl}`,
+        tracks: pat.verse, gChorus: pat.chorus,
+        _key: "custom" + cs.id, _genre: cs.genre, _level: lvl, _custom: true, _id: cs.id,
+      });
+    });
+  }
+
   function currentSongList() {
-    const byGenre = window.DrumSongs && window.DrumSongs[state.genre];
+    const byGenre = SONGDB[state.genre];
     return (byGenre && byGenre[state.level]) || [];
   }
   function currentSong() { return currentSongList()[state.song]; }
@@ -201,12 +263,11 @@
   let songIndex = [];
   function buildSongIndex() {
     songIndex = [];
-    const D = window.DrumSongs || {};
-    Object.keys(D).forEach((genre) => {
+    Object.keys(SONGDB).forEach((genre) => {
       const label = (GENRES[genre] && GENRES[genre].label) || genre;
       for (let lvl = 1; lvl <= 5; lvl++) {
-        (D[genre][lvl] || []).forEach((s, idx) => {
-          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist });
+        (SONGDB[genre][lvl] || []).forEach((s, idx) => {
+          songIndex.push({ genre, genreLabel: label, level: lvl, idx, title: s.title, artist: s.artist, custom: !!s._custom });
         });
       }
     });
@@ -241,7 +302,7 @@
       const row = document.createElement("div");
       row.className = "search-item" + (i === 0 ? " active" : "");
       row.innerHTML =
-        `<span><span class="si-name">${escapeHtml(m.title)}</span> ` +
+        `<span><span class="si-name">${m.custom ? "★ " : ""}${escapeHtml(m.title)}</span> ` +
         `<span class="si-artist">— ${escapeHtml(m.artist)}</span></span>` +
         `<span class="si-tag">${escapeHtml(m.genreLabel)} · L${m.level}</span>`;
       row.addEventListener("mousedown", (ev) => {
@@ -269,6 +330,133 @@
     refreshPatternUI();
     el.songSearch.value = "";
     hideResults();
+  }
+
+  // ---- Add / manage user songs -------------------------------------------
+  function fillSelect(sel, items) {
+    sel.innerHTML = "";
+    items.forEach(([val, label]) => {
+      const o = document.createElement("option");
+      o.value = String(val);
+      o.textContent = label;
+      sel.appendChild(o);
+    });
+  }
+
+  function initManageControls() {
+    fillSelect(el.csGenre, Object.keys(GENRES).map((g) => [g, GENRES[g].label]));
+    fillSelect(el.csLevel, [1, 2, 3, 4, 5].map((l) => [l, "Level " + l]));
+    fillSelect(el.csKey, Object.keys(NOTE_MIDI).map((k) => [k, "Key of " + k]));
+    fillSelect(el.csMove, [1, 2, 3, 4, 5].map((l) => [l, "Level " + l]));
+    el.csGenre.value = state.genre;
+    el.csKey.value = "C";
+    updateLookup();
+  }
+
+  function updateLookup() {
+    const t = el.csTitle.value.trim();
+    const a = el.csArtist.value.trim();
+    const q = encodeURIComponent(((t + " " + a).trim() || "drum") + " drum beat bpm");
+    el.csLookup.href = "https://www.google.com/search?q=" + q;
+  }
+
+  function addSong() {
+    const title = el.csTitle.value.trim();
+    if (!title) { el.csMsg.textContent = "Please enter a song title."; return; }
+    const genre = el.csGenre.value;
+    const level = parseInt(el.csLevel.value, 10);
+    const bpm = Math.max(40, Math.min(220, parseInt(el.csBpm.value, 10) || 100));
+    const key = el.csKey.value;
+    const custom = loadCustom();
+    const id = "c" + Date.now() + Math.floor(Math.random() * 1000);
+    custom.songs.push({ id, genre, level, title, artist: el.csArtist.value.trim(), bpm, key, root: NOTE_MIDI[key] });
+    saveCustom(custom);
+    buildSongDB();
+    buildSongIndex();
+    const idx = currentListIndexOfCustom(id, genre, level);
+    selectGlobalSong(genre, level, idx);
+    renderCustomList();
+    el.csMsg.textContent = `Added “${title}” to ${GENRES[genre].label} · Level ${level}.`;
+    el.csTitle.value = "";
+    el.csArtist.value = "";
+    updateLookup();
+  }
+
+  function deleteCustom(id) {
+    const custom = loadCustom();
+    const wasSelected = songMode() && currentSong() && currentSong()._id === id;
+    custom.songs = (custom.songs || []).filter((s) => s.id !== id);
+    saveCustom(custom);
+    buildSongDB();
+    buildSongIndex();
+    if (wasSelected) setLevel(state.level); // back to practice
+    else buildSongOptions();
+    renderCustomList();
+  }
+
+  function changeSongLevel(newLevel) {
+    if (!songMode() || !currentSong()) {
+      el.csMsg.textContent = "Pick a song first, then change its level.";
+      return;
+    }
+    const s = currentSong();
+    newLevel = Math.min(Math.max(newLevel, 1), 5);
+    const custom = loadCustom();
+    if (s._custom) {
+      const cs = custom.songs.find((x) => x.id === s._id);
+      if (cs) cs.level = newLevel;
+    } else {
+      custom.overrides = custom.overrides || {};
+      custom.overrides[s._key] = newLevel;
+    }
+    saveCustom(custom);
+    const key = s._key;
+    const title = s.title;
+    buildSongDB();
+    buildSongIndex();
+    state.level = newLevel;
+    el.level.value = newLevel;
+    buildSongOptions();
+    const idx = currentSongList().findIndex((x) => x._key === key);
+    state.song = idx >= 0 ? idx : -1;
+    el.song.value = String(state.song);
+    refreshPatternUI();
+    renderCustomList();
+    el.csMsg.textContent = `Moved “${title}” to Level ${newLevel}.`;
+  }
+
+  function currentListIndexOfCustom(id, genre, level) {
+    const list = (SONGDB[genre] && SONGDB[genre][level]) || [];
+    return list.findIndex((s) => s._id === id);
+  }
+
+  function renderCustomList() {
+    const custom = loadCustom();
+    el.csList.innerHTML = "";
+    if (!custom.songs || !custom.songs.length) {
+      const d = document.createElement("div");
+      d.className = "muted small";
+      d.textContent = "No songs added yet.";
+      el.csList.appendChild(d);
+      return;
+    }
+    custom.songs.forEach((cs) => {
+      const row = document.createElement("div");
+      row.className = "cs-item";
+      const name = document.createElement("span");
+      name.className = "cs-name";
+      name.textContent = `★ ${cs.title} — ${cs.artist || "Custom"} (${GENRES[cs.genre].label} L${cs.level})`;
+      name.addEventListener("click", () =>
+        selectGlobalSong(cs.genre, cs.level, currentListIndexOfCustom(cs.id, cs.genre, cs.level)));
+      const del = document.createElement("button");
+      del.className = "cs-del";
+      del.textContent = "✕";
+      del.title = "Delete song";
+      del.addEventListener("click", () => deleteCustom(cs.id));
+      row.appendChild(name);
+      row.appendChild(del);
+      el.csList.appendChild(row);
+    });
   }
 
   // ---- Rendering ---------------------------------------------------------
@@ -383,6 +571,7 @@
       el.level.value = state.level;
     }
     el.song.value = String(state.song);
+    if (el.csMove && songMode()) el.csMove.value = String(state.level);
     renderGrid();
     renderTab();
     updateProgressUI();
@@ -724,6 +913,11 @@
     el.stop.addEventListener("click", stop);
     el.testSound.addEventListener("click", testSound);
 
+    el.csAdd.addEventListener("click", addSong);
+    el.csTitle.addEventListener("input", updateLookup);
+    el.csArtist.addEventListener("input", updateLookup);
+    el.csMove.addEventListener("change", () => changeSongLevel(parseInt(el.csMove.value, 10)));
+
     el.resetProgress.addEventListener("click", () => {
       localStorage.removeItem(STORAGE_KEY);
       state.loopsCompleted = 0;
@@ -754,11 +948,14 @@
     const saved = load();
     state.genre = saved.genre && GENRES[saved.genre] ? saved.genre : "rock";
     el.genre.value = state.genre;
+    buildSongDB();
     buildSongIndex();
     buildSongOptions();
     el.level.max = maxLevel();
     const lvl = (saved.levelByGenre && saved.levelByGenre[state.genre]) || 1;
     renderPads();
+    initManageControls();
+    renderCustomList();
     bindEvents();
     setLevel(lvl);
   }

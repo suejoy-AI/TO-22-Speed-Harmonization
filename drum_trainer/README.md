@@ -32,9 +32,19 @@ the drum notes — your level rises automatically as you keep practicing.
   (~26 bars) — with the groove changing per section, drum fills on the
   transitions, a chord progression, and a real ending. The notation and a
   "section · bar X / N" indicator follow along as it plays.
-- **Search any song.** The "Find a song" box searches all 200 songs by title or
-  artist across every genre and level; picking a result jumps straight to that
+- **Search any song.** The "Find a song" box searches every song by title or
+  artist across all genres and levels; picking a result jumps straight to that
   song (setting the genre, level, and tempo for you).
+- **Mute the drums to play along.** A **Drums** toggle silences the app's kit
+  while the song's backing keeps playing, so you can drum over it yourself and
+  read the on-screen notation as your guide.
+- **Add your own songs and re-rank any song.** The "Add / manage songs" panel
+  lets you add a song (title, artist, genre, level, tempo, key) — it's saved in
+  your browser, shows up in the lists and search (marked ★), and is playable
+  with a level-appropriate groove and backing. You can also **change the level**
+  of any song (yours or built-in) to re-rank its difficulty. Live internet
+  search isn't possible inside the sandboxed page, so a "Look up" link opens a
+  web search to find a song's tempo/feel, which you then enter.
 - **Real acoustic drum sounds.** The kit plays recorded, public-domain (CC0)
   acoustic drum samples (embedded in `samples.js`), with a light room reverb and
   per-hit level/pitch humanization so it sounds like a real kit in a room rather
