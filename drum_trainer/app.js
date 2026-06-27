@@ -223,7 +223,8 @@
     (window.DrumClassics || []).forEach((cs) => {
       if (!SONGDB[cs.genre]) return;
       const lvl = Math.min(Math.max(cs.level, 1), 5);
-      SONGDB[cs.genre][lvl].push({
+      // prepend so the 🎵 public-domain songs are visible at the top of the list
+      SONGDB[cs.genre][lvl].unshift({
         title: cs.title, artist: cs.composer, bpm: cs.bpm,
         tip: "Public-domain song — the actual melody & lyrics play. Mute Drums to play along yourself. — " + cs.composer,
         tracks: cs.groove, gChorus: cs.groove, bars: cs.bars, repeat: cs.repeat || 2,
