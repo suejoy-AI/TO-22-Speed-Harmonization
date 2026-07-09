@@ -343,6 +343,20 @@ const SIG = {
   "cissy strut": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
   "so what": { verse: { ride: "x---x-x-x---x-x-", hihat: "----x-------x---", snare: "------g-----x---", kick: "x-------x-------" } },
   "take five": { verse: { ride: "x---x-x-x---x-x-", hihat: "----x-------x---", snare: "------g-------g-", kick: "x-------x-------" } },
+  "sweet child o' mine": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "should i stay or should i go": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "livin' on a prayer": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x---x---" } },
+  "another brick in the wall": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "welcome to the jungle": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
+  "when the levee breaks": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
+  "mr. brightside": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "rolling in the deep": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "uptown funk": { verse: { hihat: "x-xxx-xxx-xxx-xx", snare: "----x-------x---", kick: "x--x--x---x-----" } },
+  "get lucky": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "sweet home alabama": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "born to be wild": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "you really got me": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "september": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x---x---x---x---" } },
 };
 
 function buildGroove(genre, lvl, title) {
