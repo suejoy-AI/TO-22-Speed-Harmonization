@@ -348,20 +348,20 @@ const SIG = {
   "sweet child o' mine": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
   "should i stay or should i go": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
   "livin' on a prayer": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x---x---" } },
-  "another brick in the wall": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
+  "another brick in the wall": { verse: { openhat: "--o---o---o---o-", hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "welcome to the jungle": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
   "when the levee breaks": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
   "mr. brightside": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "rolling in the deep": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "uptown funk": { verse: { hihat: "x-xxx-xxx-xxx-xx", snare: "----x-------x---", kick: "x--x--x---x-----" } },
-  "get lucky": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
+  "get lucky": { verse: { openhat: "--o---o---o---o-", hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "sweet home alabama": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-------" } },
   "born to be wild": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "you really got me": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "september": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x---x---x---x---" } },
-  "who made who": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
-  "get back": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-x-----" } },
-  "sgt. pepper's lonely hearts club band": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x---x---" } },
+  "who made who": { verse: { crash: "x---------------", hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-x-----" } },
+  "get back": { verse: { openhat: "--------------o-", hihat: "x-x-x-x-x-x-x---", snare: "----x-------x---", kick: "x-------x-x-----" } },
+  "sgt. pepper's lonely hearts club band": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x--x-x-x--x-x---" } },
 };
 
 function buildGroove(genre, lvl, title) {
@@ -373,14 +373,24 @@ function buildGroove(genre, lvl, title) {
     return { verse, chorus };
   }
   const b = BASE[genre];
-  const use16 = genre === "funk" || (lvl >= 3 && h % 3 === 0);
   const useGhost = (genre === "funk" && lvl >= 2) || (lvl >= 2 && h % 2 === 0);
-  const hat = use16 ? b.hat16 : b.hat;
   const snare = useGhost ? b.snareG : b.snare;
-  const verse = { hihat: hat, snare, kick: KICKS[lvl][h % KICKS[lvl].length] };
+  const verse = { snare, kick: KICKS[lvl][h % KICKS[lvl].length] };
+  // vary the hi-hat feel so songs don't all sound the same
+  if (genre === "funk") {
+    verse.hihat = b.hat16;
+    if (h % 3 === 0) verse.openhat = "---------o------";
+  } else {
+    const style = h % 4;
+    if (style === 1 && lvl >= 2) verse.hihat = b.hat16;                                   // driving 16ths
+    else if (style === 2) { verse.hihat = b.hat; verse.openhat = "--o---o---o---o-"; }     // open-hat groove
+    else if (style === 3 && lvl >= 3) { verse.hihat = b.hat16; verse.openhat = "--------------o-"; }
+    else verse.hihat = b.hat;                                                              // straight 8ths
+  }
   const cl = Math.min(lvl + 1, 5);
-  const chorus = { hihat: hat, snare, kick: KICKS[cl][(h + 3) % KICKS[cl].length] };
-  if (h % 2 === 0) chorus.openhat = "--------------o-";
+  const chorus = Object.assign({}, verse);
+  chorus.kick = KICKS[cl][(h + 3) % KICKS[cl].length];
+  if (!chorus.openhat && h % 2 === 0) chorus.openhat = "--------------o-";
   return { verse, chorus };
 }
 
