@@ -164,7 +164,8 @@ const SONGS = {
       ["Another Brick in the Wall","Pink Floyd",104,"D"],["Livin' on a Prayer","Bon Jovi",122,"E"],
       ["Basket Case","Green Day",172,"Eb"],["Brown Eyed Girl","Van Morrison",146,"G"],
       ["Highway to Hell","AC/DC",116,"A"],["Wonderwall","Oasis",87,"F#"],
-      ["Who Made Who","AC/DC",113,"D"],
+      ["Who Made Who","AC/DC",113,"D"],["Get Back","The Beatles",123,"A"],
+      ["Sgt. Pepper's Lonely Hearts Club Band","The Beatles",96,"G"],
     ],
     3: [
       ["Mr. Brightside","The Killers",148,"D"],["Born to Run","Bruce Springsteen",147,"E"],
@@ -359,6 +360,8 @@ const SIG = {
   "you really got me": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "september": { verse: { hihat: "xxxxxxxxxxxxxxxx", snare: "----x-------x---", kick: "x---x---x---x---" } },
   "who made who": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x-------" } },
+  "get back": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-------x-x-----" } },
+  "sgt. pepper's lonely hearts club band": { verse: { hihat: "x-x-x-x-x-x-x-x-", snare: "----x-------x---", kick: "x-----x-x---x---" } },
 };
 
 function buildGroove(genre, lvl, title) {

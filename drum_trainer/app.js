@@ -52,6 +52,7 @@
     ytInput: document.getElementById("yt-input"),
     ytLoad: document.getElementById("yt-load"),
     ytSearch: document.getElementById("yt-search"),
+    ytDrumless: document.getElementById("yt-drumless"),
     ytFrame: document.getElementById("yt-frame"),
     ytNote: document.getElementById("yt-note"),
     lyrics: document.getElementById("lyrics"),
@@ -571,12 +572,14 @@
 
   // ---- YouTube play-along (real recordings) ------------------------------
   function updateYtSearch() {
-    let q = "drum cover";
+    let base = "drum cover";
     if (songMode() && currentSong()) {
       const s = currentSong();
-      q = `${s.title} ${s.artist || ""}`.trim();
+      base = `${s.title} ${s.artist || ""}`.trim();
     }
-    el.ytSearch.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+    const yt = (q) => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+    el.ytSearch.href = yt(base);
+    el.ytDrumless.href = yt(base + " drumless no drums backing track");
   }
 
   function parseYtId(url) {
