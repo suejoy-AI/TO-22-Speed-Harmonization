@@ -372,6 +372,7 @@
     state.loopsCompleted = 0;
     save();
     refreshPatternUI();
+    autoloadYouTube();
     el.songSearch.value = "";
     hideResults();
   }
@@ -592,17 +593,55 @@
     return m ? m[1] : null;
   }
 
+  function embedYouTube(id, autoplay) {
+    const auto = autoplay ? "&autoplay=1" : "";
+    el.ytFrame.innerHTML =
+      `<iframe src="https://www.youtube.com/embed/${id}?rel=0${auto}" title="YouTube player" ` +
+      `allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  }
+
+  function songVideoKey() {
+    return songMode() && currentSong() ? currentSong()._key : null;
+  }
+  function saveVideoForSong(id) {
+    const k = songVideoKey();
+    if (!k) return;
+    const c = loadCustom();
+    c.videos = c.videos || {};
+    c.videos[k] = id;
+    saveCustom(c);
+  }
+  function getSavedVideo() {
+    const k = songVideoKey();
+    if (!k) return null;
+    const c = loadCustom();
+    return (c.videos && c.videos[k]) || null;
+  }
+
   function loadYouTube() {
     const id = parseYtId(el.ytInput.value);
     if (!id) {
-      el.ytNote.textContent = "Couldn't read that link — paste a full YouTube URL (or use Search ↗).";
+      el.ytNote.textContent = "Couldn't read that link — paste a full YouTube URL (or use Drumless ↗ / Original ↗).";
       return;
     }
-    el.ytFrame.innerHTML =
-      `<iframe src="https://www.youtube.com/embed/${id}?rel=0" title="YouTube player" ` +
-      `allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    embedYouTube(id, true);
+    saveVideoForSong(id);
+    el.ytInput.value = "";
     el.ytNote.textContent =
-      "Tip: press the song's Play on YouTube, then start drumming. If the player stays blank, this embedded preview is blocking YouTube — open the downloaded file instead, or use Search ↗ to play it in a new tab.";
+      "Playing — and saved for this song, so it auto-plays next time you pick it. (If it says \"unavailable\", that video blocks embedding — try another link, or use Drumless ↗ / Original ↗.)";
+  }
+
+  // Auto-open + auto-play the saved video when a song is selected.
+  function autoloadYouTube() {
+    el.ytFrame.innerHTML = "";
+    el.ytNote.textContent = "";
+    const id = getSavedVideo();
+    if (id) {
+      const d = document.querySelector(".yt");
+      if (d) d.open = true;
+      embedYouTube(id, true);
+      el.ytNote.textContent = "Auto-playing this song's saved video. Mute Drums (left) to play the drums yourself.";
+    }
   }
 
   // ---- Lyrics (public-domain songs) --------------------------------------
@@ -994,6 +1033,7 @@
     state.tempo = s.bpm;
     el.tempoValue.textContent = s.bpm;
     refreshPatternUI();
+    autoloadYouTube();
   }
 
   function onGenreChange() {
